@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Production-shaped URL shortener (Phase 1)
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 10
+    MemorySize: 256
+    Tracing: Active
+    Environment:
+      Variables:
+        LOG_LEVEL: info
+        CODE_LENGTH: "4" # Levi's Phase 1 choice
+
+Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+
+  UrlTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: url-shortener-urls
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: code
+          AttributeType: S
+      KeySchema:
+        - AttributeName: code
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expireAt
+        Enabled: true
+
+  ClickEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: url-shortener-click-events
+      VisibilityTimeout: 30
+      MessageRetentionPeriod: 345600 # 4 days
+
+  CreateLinkFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: dist/handlers/createLink.handler
+      Events:
+        CreateLinkRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /links
+            Method: POST
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref UrlTable
+      Environment:
+        Variables:
+          URL_TABLE_NAME: !Ref UrlTable
+
+  RedirectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: dist/handlers/redirect.handler
+      Events:
+        RedirectRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{code}
+            Method: GET
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UrlTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt ClickEventsQueue.QueueName
+      Environment:
+        Variables:
+          URL_TABLE_NAME: !Ref UrlTable
+          CLICK_QUEUE_URL: !Ref ClickEventsQueue
+
+  AnalyticsWorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: dist/handlers/analyticsWorker.handler
+      Timeout: 15
+      MemorySize: 256
+      Events:
+        ClickQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ClickEventsQueue.Arn
+            BatchSize: 10
+      Policies:
+        # Phase 1: just logs; later we'll write AnalyticsTable permissions here
+        - AWSLambdaBasicExecutionRole
+
+Outputs:
+  ApiBaseUrl:
+    Description: Base URL for HTTP API
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
