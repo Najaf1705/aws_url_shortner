@@ -5,6 +5,7 @@ import { sendClickEvent } from "../lib/sqs";
 
 export const handler = async (event: any) => {
   const code = event?.pathParameters?.code;
+  console.log("CODE IS ==> ", code);
   if (!code) return notFound();
 
   try {
@@ -58,9 +59,58 @@ export const handler = async (event: any) => {
 };
 
 function notFound() {
+  const YOUR_WEBSITE_URL = "https://shorty.najaf.in"; // <-- change this
+
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Link not found</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: #fff; color: #111;
+      display: grid; place-items: center; min-height: 100vh; padding: 24px;
+    }
+    .card {
+      width: min(560px, 100%);
+      border: 2px solid #2b2b2b;
+      box-shadow: 0 18px 60px rgba(0,0,0,.18);
+      padding: 22px;
+    }
+    h1 { margin: 0 0 10px; font-size: 28px; }
+    p { margin: 0 0 16px; color: #333; line-height: 1.45; }
+    .btn {
+      display: inline-block;
+      border: 2px solid #2b2b2b;
+      padding: 10px 16px;
+      text-decoration: none;
+      color: #111;
+      font-weight: 700;
+      background: #fff;
+    }
+    .btn:hover { background: #f3f3f3; }
+    .muted { margin-top: 14px; font-size: 12px; color: #666; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Not found</h1>
+    <p>This short link doesn’t exist or has expired.</p>
+    <a class="btn" href="${YOUR_WEBSITE_URL}" rel="noopener noreferrer">Go to website</a>
+    <div class="muted">Error 404 · cache-control: no-store</div>
+  </main>
+</body>
+</html>`;
+
   return {
     statusCode: 404,
-    headers: { "cache-control": "no-store" },
-    body: "Not found",
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+    },
+    body: html,
   };
 }
