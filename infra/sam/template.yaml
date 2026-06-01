@@ -4,7 +4,7 @@ Description: Production-shaped URL shortener (Phase 1)
 
 Globals:
   Function:
-    Runtime: nodejs20.x
+    Runtime: nodejs24.x
     Timeout: 10
     MemorySize: 256
     Tracing: Active
