@@ -19,6 +19,19 @@ function nowHHMMSS() {
   return `${hh}:${mm}:${ss}`;
 }
 
+function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+
+    return (
+      parsed.protocol === "http:" ||
+      parsed.protocol === "https:"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function IconCopy() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
@@ -81,6 +94,7 @@ export default function App() {
     if (!API_BASE) { setErr(err => [...err, "API Base missing"]); return; }
     const trimmed = longUrl.trim();
     if (!trimmed) { setErr(err => [...err, "Error: Destination URL is required."]); return; }
+    if(!isValidUrl(trimmed)){ setErr(err => [...err, "Error: Enter a valid URL"]); return; }
     setLoading(true);
     try {
       const payload: any = { longUrl: trimmed };
@@ -100,7 +114,7 @@ export default function App() {
       setGenerationTime(nowHHMMSS());
       setDisplayResult(true);
     } catch (e: any) {
-      setErr(e?.message ?? "Something went wrong");
+      setErr(err=>[...err, e?.message ?? "Something went wrong"]);
     } finally {
       setLoading(false);
     }
@@ -307,7 +321,7 @@ export default function App() {
                 label="SHORT URL"
                 value={
                   shortUrl
-                    ? <a className="text-[#5a8cff] no-underline hover:underline font-mono" href={shortUrl} target="_blank" rel="noreferrer">{shortUrl}</a>
+                    ? <a className="text-[#5a8cff] no-underline hover:underline font-mono" href={shortUrl} title={shortUrl} target="_blank" rel="noreferrer">{shortUrl}</a>
                     : <span className="text-[#666]">Missing API base</span>
                 }
                 right={
@@ -337,7 +351,7 @@ export default function App() {
               {/* ORIGIN row */}
               <KvRow
                 label="ORIGIN"
-                value={<span className="font-mono overflow-hidden text-ellipsis whitespace-nowrap">{longUrl}</span>}
+                value={<span className="font-mono overflow-hidden text-ellipsis whitespace-nowrap" title={longUrl}>{longUrl}</span>}
                 right={
                   <IconBtn copied={copiedKey === "origin"} onClick={() => copyWithFeedback("origin", longUrl)} title="Copy origin" />
                 }
