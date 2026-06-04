@@ -120,6 +120,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [result, setResult] = useState<CreateResponse | null>(null);
+  const [generationTime, setGenerationTime] = useState<String | null>(null);
+  const [displayResult, setDisplayResult] = useState<Boolean | null>(false);
 
   // Which icon button should show the green double tick
   const [copiedKey, setCopiedKey] = useState<CopyKey>(null);
@@ -160,6 +162,8 @@ export default function App() {
 
       const data = JSON.parse(text) as CreateResponse;
       setResult(data);
+      setGenerationTime(nowHHMMSS());
+      setDisplayResult(true)
     } catch (e: any) {
       setErr(e?.message ?? "Something went wrong");
     } finally {
@@ -180,6 +184,7 @@ export default function App() {
     setExpirySeconds(3600);
     setUseDefaultExpiry(false);
     setCopiedKey(null);
+    setDisplayResult(false);
   }
 
   async function copyWithFeedback(key: Exclude<CopyKey, null>, text: string) {
@@ -219,7 +224,9 @@ export default function App() {
 
           <div className="status">
             <span className={`dot ${statusOnline ? "ok" : "down"}`} />
-            <span className="statusText">{statusOnline ? "API online" : "API offline"}</span>
+            <span className="statusText">
+              {statusOnline ? "API online" : "API offline"}
+            </span>
           </div>
         </div>
 
@@ -230,72 +237,88 @@ export default function App() {
 
         <div className="divider" />
 
-        <div className="section">
-          <div className="label">DESTINATION URL</div>
-          <input
-            className="input"
-            type="url"
-            inputMode="url"
-            value={longUrl}
-            onChange={(e) => setLongUrl(e.target.value)}
-            placeholder="https://example.com/very/long/path/to/resource?query=value"
-            spellCheck={false}
-          />
-          <div className="helper">Must include protocol (https:// or http://)</div>
-
-          <div className="grid2">
-            <div>
-              <div className="label">EXPIRY (SECONDS)</div>
+        {!displayResult && (
+          <>
+            <div className="section">
+              <div className="label">DESTINATION URL</div>
               <input
                 className="input"
-                type="number"
-                value={expirySeconds}
-                onChange={(e) => setExpirySeconds(Number(e.target.value))}
-                disabled={useDefaultExpiry}
-                min={60}
-                step={60}
+                type="url"
+                inputMode="url"
+                value={longUrl}
+                onChange={(e) => setLongUrl(e.target.value)}
+                placeholder="https://example.com/very/long/path/to/resource?query=value"
+                spellCheck={false}
               />
-              <div className="helper">Leave blank for API default (~24h)</div>
-            </div>
+              <div className="helper">
+                Must include protocol (https:// or http://)
+              </div>
 
-            <div>
-              <div className="label">DEFAULT EXPIRY</div>
-              <label className="toggleWrap">
-                <span className="toggle">
+              <div className="grid2">
+                <div>
+                  <div className="label">EXPIRY (SECONDS)</div>
                   <input
-                    type="checkbox"
-                    checked={useDefaultExpiry}
-                    onChange={(e) => setUseDefaultExpiry(e.target.checked)}
+                    className="input"
+                    type="number"
+                    value={expirySeconds}
+                    onChange={(e) => setExpirySeconds(Number(e.target.value))}
+                    disabled={useDefaultExpiry}
+                    min={60}
+                    step={60}
                   />
-                  <span className="slider" />
-                </span>
-                <span className="toggleText">Use API default</span>
-              </label>
+                  <div className="helper">
+                    Leave blank for API default (~24h)
+                  </div>
+                </div>
+
+                <div>
+                  <div className="label">DEFAULT EXPIRY</div>
+                  <label className="toggleWrap">
+                    <span className="toggle">
+                      <input
+                        type="checkbox"
+                        checked={useDefaultExpiry}
+                        onChange={(e) => setUseDefaultExpiry(e.target.checked)}
+                      />
+                      <span className="slider" style={{background:useDefaultExpiry? "#7fa7ff":"black"}} />
+                    </span>
+                    <span className="toggleText">Use API default</span>
+                  </label>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="divider" />
+            <div className="divider" />
 
-        <div className="actions">
-          <button className="btn primary" onClick={createShortUrl} disabled={loading}>
-            {loading ? "Creating..." : "Create Short URL"}
-          </button>
+            <div className="actions">
+              <button
+                className="btn primary"
+                onClick={createShortUrl}
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Create Short URL"}
+              </button>
 
-          <button className="btn" onClick={fillExample} disabled={loading}>
-            Fill example
-          </button>
+              <button className="btn" onClick={fillExample} disabled={loading}>
+                Fill example
+              </button>
 
-          {result && (
-            <button className="btn ghost right" onClick={clearAll} disabled={loading}>
-              × Clear
-            </button>
-          )}
-        </div>
+              {result && (
+                <button
+                  className="btn ghost right"
+                  onClick={clearAll}
+                  disabled={loading}
+                >
+                  × Clear
+                </button>
+              )}
+            </div>
 
-        {err && <div className="alert">{err}</div>}
+            {err && <div className="alert">{err}</div>}
+          </>
+        )}
 
-        {result && (
+        {result && displayResult && (
           <>
             <div className="divider" />
 
@@ -306,10 +329,10 @@ export default function App() {
                 </span>
                 <span className="generatedText">GENERATED</span>
               </div>
-              <div className="generatedTime">{nowHHMMSS()}</div>
+              <div className="generatedTime">{generationTime}</div>
             </div>
 
-            <div className="divider" />
+            {/* <div className="divider" /> */}
 
             <div className="kvTable">
               <div className="kvRow">
@@ -323,10 +346,14 @@ export default function App() {
                     aria-label="Copy code"
                   >
                     <span className="iconSwap">
-                      <span className={`i ${copiedKey === "code" ? "out" : "in"}`}>
+                      <span
+                        className={`i ${copiedKey === "code" ? "out" : "in"}`}
+                      >
                         <IconCopy />
                       </span>
-                      <span className={`i ok ${copiedKey === "code" ? "in" : "out"}`}>
+                      <span
+                        className={`i ok ${copiedKey === "code" ? "in" : "out"}`}
+                      >
                         <IconDoubleCheck />
                       </span>
                     </span>
@@ -338,7 +365,12 @@ export default function App() {
                 <div className="k">SHORT URL</div>
                 <div className="v">
                   {shortUrl ? (
-                    <a className="link" href={shortUrl} target="_blank" rel="noreferrer">
+                    <a
+                      className="link"
+                      href={shortUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       {shortUrl}
                     </a>
                   ) : (
@@ -355,10 +387,14 @@ export default function App() {
                         aria-label="Copy short URL"
                       >
                         <span className="iconSwap">
-                          <span className={`i ${copiedKey === "shortUrl" ? "out" : "in"}`}>
+                          <span
+                            className={`i ${copiedKey === "shortUrl" ? "out" : "in"}`}
+                          >
                             <IconCopy />
                           </span>
-                          <span className={`i ok ${copiedKey === "shortUrl" ? "in" : "out"}`}>
+                          <span
+                            className={`i ok ${copiedKey === "shortUrl" ? "in" : "out"}`}
+                          >
                             <IconDoubleCheck />
                           </span>
                         </span>
@@ -380,7 +416,9 @@ export default function App() {
               <div className="kvRow">
                 <div className="k">EXPIRES</div>
                 <div className="v">{expiresInText ?? "—"}</div>
-                <div className="r mutedSmall">{formatExpireAt(result.expireAt)}</div>
+                <div className="r mutedSmall">
+                  {formatExpireAt(result.expireAt)}
+                </div>
               </div>
 
               <div className="kvRow">
@@ -394,15 +432,28 @@ export default function App() {
                     aria-label="Copy origin"
                   >
                     <span className="iconSwap">
-                      <span className={`i ${copiedKey === "origin" ? "out" : "in"}`}>
+                      <span
+                        className={`i ${copiedKey === "origin" ? "out" : "in"}`}
+                      >
                         <IconCopy />
                       </span>
-                      <span className={`i ok ${copiedKey === "origin" ? "in" : "out"}`}>
+                      <span
+                        className={`i ok ${copiedKey === "origin" ? "in" : "out"}`}
+                      >
                         <IconDoubleCheck />
                       </span>
                     </span>
                   </button>
                 </div>
+              </div>
+              <div className="kvRow" style={{display: "flex", justifyContent: "end"}}>
+                <button
+                  className="btn ghost right"
+                  onClick={clearAll}
+                  disabled={loading}
+                >
+                  Create new
+                </button>
               </div>
             </div>
           </>
