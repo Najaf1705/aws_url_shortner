@@ -1,7 +1,6 @@
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Production-shaped URL shortener (Phase 1)
-
 Globals:
   Function:
     Runtime: nodejs24.x
@@ -11,81 +10,89 @@ Globals:
     Environment:
       Variables:
         LOG_LEVEL: info
-        CODE_LENGTH: "4" # Levi's Phase 1 choice
-
+        CODE_LENGTH: '4'
 Resources:
   HttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: prod
-
   UrlTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: url-shortener-urls
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: code
-          AttributeType: S
+      - AttributeName: code
+        AttributeType: S
       KeySchema:
-        - AttributeName: code
-          KeyType: HASH
+      - AttributeName: code
+        KeyType: HASH
       TimeToLiveSpecification:
         AttributeName: expireAt
         Enabled: true
-
   ClickEventsQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: url-shortener-click-events
       VisibilityTimeout: 30
-      MessageRetentionPeriod: 345600 # 4 days
-
+      MessageRetentionPeriod: 345600
   CreateLinkFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../../services/api
+      CodeUri: CreateLinkFunction
       Handler: dist/handlers/createLink.handler
       Events:
         CreateLinkRoute:
           Type: HttpApi
           Properties:
-            ApiId: !Ref HttpApi
+            ApiId:
+              Ref: HttpApi
             Path: /links
             Method: POST
       Policies:
-        - DynamoDBWritePolicy:
-            TableName: !Ref UrlTable
+      - DynamoDBWritePolicy:
+          TableName:
+            Ref: UrlTable
       Environment:
         Variables:
-          URL_TABLE_NAME: !Ref UrlTable
-
+          URL_TABLE_NAME:
+            Ref: UrlTable
+    Metadata:
+      SamResourceId: CreateLinkFunction
   RedirectFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../../services/api
+      CodeUri: RedirectFunction
       Handler: dist/handlers/redirect.handler
       Events:
         RedirectRoute:
           Type: HttpApi
           Properties:
-            ApiId: !Ref HttpApi
+            ApiId:
+              Ref: HttpApi
             Path: /{code}
             Method: GET
       Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref UrlTable
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt ClickEventsQueue.QueueName
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: UrlTable
+      - SQSSendMessagePolicy:
+          QueueName:
+            Fn::GetAtt:
+            - ClickEventsQueue
+            - QueueName
       Environment:
         Variables:
-          URL_TABLE_NAME: !Ref UrlTable
-          CLICK_QUEUE_URL: !Ref ClickEventsQueue
-
+          URL_TABLE_NAME:
+            Ref: UrlTable
+          CLICK_QUEUE_URL:
+            Ref: ClickEventsQueue
+    Metadata:
+      SamResourceId: RedirectFunction
   AnalyticsWorkerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../../services/api
+      CodeUri: AnalyticsWorkerFunction
       Handler: dist/handlers/analyticsWorker.handler
       Timeout: 15
       MemorySize: 256
@@ -93,13 +100,19 @@ Resources:
         ClickQueueEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt ClickEventsQueue.Arn
+            Queue:
+              Fn::GetAtt:
+              - ClickEventsQueue
+              - Arn
             BatchSize: 10
       Policies:
-        - DynamoDBWritePolicy:
-            TableName: !Ref UrlTable
-
+      - DynamoDBWritePolicy:
+          TableName:
+            Ref: UrlTable
+    Metadata:
+      SamResourceId: AnalyticsWorkerFunction
 Outputs:
   ApiBaseUrl:
     Description: Base URL for HTTP API
-    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Value:
+      Fn::Sub: https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/prod

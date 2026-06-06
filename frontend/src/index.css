@@ -37,20 +37,20 @@ body {
 }
 
 .btn-3d {
-  box-shadow: 5px 5px 0 0 #9b0000;
+  box-shadow: 5px 5px 0 0 #56b684;
   transition: box-shadow 80ms ease, transform 80ms ease;
 }
 
 .btn-3d:hover {
-  box-shadow: 7px 7px 0 0 #9b0000;
+  box-shadow: 7px 7px 0 0 #56b684;
 }
 
 .btn-3d:active {
-  box-shadow: 0 0px 0 0 #9b0000;
+  box-shadow: 0 0px 0 0 #56b684;
   transform: translateY(4px);
 }
 
 .btn-3d:disabled {
-  box-shadow: 0 4px 0 0 #9b0000;
+  box-shadow: 6px 6px 0 0 #56b684;
   transform: none;
 }
