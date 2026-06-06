@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 
-import ThemeToggle from "../components/ThemeToggle";
 import Header from "../components/Header";
 import UrlForm from "../components/UrlForm";
 import ResultCard from "../components/ResultCard";
