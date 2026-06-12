@@ -2,3 +2,8 @@ rate limiting
 /not-found  page ->done
 icon->done
 count stats ->done
+
+verify using otp
+display users urls
+change expiry format
+extend expiry func

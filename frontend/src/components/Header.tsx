@@ -21,7 +21,7 @@ export default function Header({ statusOnline }: Props) {
 
         {/* Hero */ }
         <div className="px-4 pb-3">
-          <h1 className="shadow-game mt-1.5 mb-1.5 text-[32px] leading-tight font-bold">Shorty</h1>
+          <h1 className="mt-1.5 mb-1.5 text-[24px] leading-tight font-bold">Shorty</h1>
           <p className="m-0 text-text text-[15px]">Generate short links with optional expiry. Instant output.</p>
         </div>
 

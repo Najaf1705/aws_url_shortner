@@ -25,6 +25,7 @@ export default function ThemeToggle() {
             onClick={() => setDarkMode((prev) => !prev)}
             className="cursor-pointer flex items-center gap-2 px-2 py-2 rounded-full border-2 border-text bg-text text-bg transition-colors hover:bg-bg hover:text-text"
             aria-label="Toggle theme"
+            title={darkMode?"Switch to light":"Switch to dark"}
         >
             {darkMode ? <SunIcon /> : <MoonIcon />}
 
