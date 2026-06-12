@@ -1,7 +1,7 @@
-export function generateOtp=async()=>{
-    try {
+// export function generateOtp=async()=>{
+//     try {
         
-    } catch (error) {
+//     } catch (error) {
         
-    }
-}
+//     }
+// }
