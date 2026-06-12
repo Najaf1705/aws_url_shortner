@@ -3,8 +3,9 @@ import axios from "axios";
 
 export async function simpleLogin(email: string, password: string): Promise<any> {
     try {
+        const AUTH_BASE = import.meta.env.VITE_AUTH_BASE as string | undefined;
         const res = await axios.post(
-            `${import.meta.env.VITE_AUTH_BASE}/login`,
+            `${AUTH_BASE}/login`,
             { email, password },
             {
                 withCredentials: true,

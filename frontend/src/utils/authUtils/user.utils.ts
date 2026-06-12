@@ -1,8 +1,9 @@
 import axios from "axios";
 
 export async function getCurrentUser() {
+    const AUTH_BASE = import.meta.env.VITE_AUTH_BASE as string | undefined;
     const res = await axios.get(
-        `${import.meta.env.VITE_AUTH_BASE}/me`,
+        `${AUTH_BASE}/me`,
         {
             withCredentials: true,
         }

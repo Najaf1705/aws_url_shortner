@@ -3,8 +3,9 @@ import axios from "axios";
 
 export async function logout(): Promise<any> {
     try {
+        const AUTH_BASE = import.meta.env.VITE_AUTH_BASE as string | undefined;
         const res = await axios.post(
-            `${import.meta.env.VITE_AUTH_BASE}/logout`,
+            `${AUTH_BASE}/logout`,
             {},
             {
                 withCredentials: true,
