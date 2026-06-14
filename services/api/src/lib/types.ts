@@ -6,6 +6,7 @@ export type CreateLinkBody = {
 export type UrlItem = {
   code: string;
   clickCount: number;
+  userId: string,
   longUrl: string;
   createdAt: string;
   expireAt: number; // epoch seconds (TTL attribute)

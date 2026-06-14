@@ -6,6 +6,7 @@ import ResultCard from "../components/ResultCard";
 
 import { isValidUrl } from "../utils/isValidUrl";
 import { nowHHMMSS } from "../utils/nowHHMMSS";
+import axios from "axios";
 
 export type CreateResponse = {
     code: string;
@@ -19,31 +20,17 @@ export type CopyKey =
     | null;
 
 export default function App() {
-    const API_BASE = import.meta.env
-        .VITE_API_BASE as string | undefined;
+    const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
 
     const [longUrl, setLongUrl] = useState("");
-    const [expirySeconds, setExpirySeconds] =
-        useState(3600);
-
-    const [useDefaultExpiry, setUseDefaultExpiry] =
-        useState(false);
-
+    const [expirySeconds, setExpirySeconds] = useState(3600);
+    const [useDefaultExpiry, setUseDefaultExpiry] = useState(false);
     const [loading, setLoading] = useState(false);
-
     const [err, setErr] = useState<string[]>([]);
-
-    const [result, setResult] =
-        useState<CreateResponse | null>(null);
-
-    const [generationTime, setGenerationTime] =
-        useState<string | null>(null);
-
-    const [displayResult, setDisplayResult] =
-        useState(false);
-
-    const [copiedKey, setCopiedKey] =
-        useState<CopyKey>(null);
+    const [result, setResult] = useState<CreateResponse | null>(null);
+    const [generationTime, setGenerationTime] = useState<string | null>(null);
+    const [displayResult, setDisplayResult] = useState(false);
+    const [copiedKey, setCopiedKey] = useState<CopyKey>(null);
 
     const shortUrl = useMemo(() => {
         if (!result || !API_BASE) return null;
@@ -125,38 +112,30 @@ export default function App() {
                     expirySeconds;
             }
 
-            const res = await fetch(
+            const { data } = await axios.post<CreateResponse>(
                 `${API_BASE}/links`,
+                payload,
                 {
-                    method: "POST",
                     headers: {
-                        "content-type":
-                            "application/json",
+                        "Content-Type": "application/json",
                     },
-                    body: JSON.stringify(payload),
+                    withCredentials: true,
                 }
             );
-
-            const text = await res.text();
-
-            if (!res.ok) {
-                throw new Error(
-                    `API error ${res.status}: ${text}`
-                );
-            }
-
-            const data = JSON.parse(
-                text
-            ) as CreateResponse;
 
             setResult(data);
             setGenerationTime(nowHHMMSS());
             setDisplayResult(true);
         } catch (e: any) {
+            const message =
+                e.response?.data?.message ||
+                e.response?.data ||
+                e.message ||
+                "Something went wrong";
+
             setErr((err) => [
                 ...err,
-                e?.message ??
-                "Something went wrong",
+                message,
             ]);
         } finally {
             setLoading(false);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import AuthLayout from "../AuthLayout";
 import { Link, useNavigate } from "react-router-dom";
+import { simpleLogin } from "../../utils/authUtils/login.utils";
 
 export default function Login() {
     const navigate = useNavigate();
@@ -8,6 +9,7 @@ export default function Login() {
     const [errEntities, setErrEntities] = useState<String>();
     const [err, setErr] = useState<String[]>([]);
     const nameRef = useRef<HTMLInputElement>(null);
+    const [sendingOtp, setSendingOtp] = useState<boolean>(false);
 
     useEffect(() => {
         nameRef.current?.focus();
@@ -51,10 +53,16 @@ export default function Login() {
     async function useOtp() {
         console.log(email, "Otp opted");
         if (!validate()) return;
+        setSendingOtp(true);
+        const res = await simpleLogin(email, "OTP");
+        setSendingOtp(false);
+        console.log("OTP: ", res)
         navigate("/otp", {
             state: {
                 email,
-                // otpId: res.otpId,
+                otpId: res.otpId,
+                loginMode: "OTP",
+                mode: "login"
             },
         });
 
@@ -72,11 +80,11 @@ export default function Login() {
                 </div>
 
                 <input
-                    className={`w-full ${errEntities === "email" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91]`}
+                    className={`w-full ${errEntities === "email" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:opacity-50 disabled:cursor-not-allowed`}
                     type="email"
                     value={email}
                     ref={nameRef}
-
+                    disabled={sendingOtp}
                     onChange={handleChange(setEmail)}
                     required
                     placeholder="najaf@example.com"
@@ -95,20 +103,20 @@ export default function Login() {
                 <div className="flex gap-4">
                     <button
                         onClick={usePassword}
-                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold"
-                    >
+                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black">
                         Password
                     </button>
                     <button
                         onClick={useOtp}
-                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold"
-                    >
-                        OTP
+                        disabled={sendingOtp}
+                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">
+                        {sendingOtp ? "Sending OTP..." : "OTP"}
+
                     </button>
                 </div>
             </div>
             {err.length > 0 && (
-                <div className="mx-4 mb-3.5 border-2 border-[#f3c3cc] bg-[#fdecef] px-3.5 py-3 font-mono text-[13px] text-black">
+                <div className="mx-4 mb-3.5 border-2 border-[#f3c3cc] bg-[#fdecef] px-3.5 py-3 font-mono text-[13px] text-black ">
                     {err.map((e, i) => <div key={i}>{e}</div>)}
                 </div>
             )}

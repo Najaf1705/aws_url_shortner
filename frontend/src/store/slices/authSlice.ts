@@ -27,7 +27,7 @@ const authSlice = createSlice({
     name: "auth",
     initialState,
     reducers: {
-        setLoading: (
+        setAuthLoading: (
             state,
             action: PayloadAction<boolean>
         ) => {
@@ -73,7 +73,7 @@ const authSlice = createSlice({
 });
 
 export const {
-    setLoading,
+    setAuthLoading,
     setUser,
     clearUser,
     setError,

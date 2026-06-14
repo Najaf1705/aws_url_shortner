@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import AuthLayout from "../AuthLayout";
 import { simpleLogin } from "../../utils/authUtils/login.utils";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -15,6 +15,11 @@ export default function Password() {
     const [err, setErr] = useState<String[]>([]);
     const [email] = useState(location.state?.email ?? "");
     const [loading, setLoading] = useState(false);
+    const passwordRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        passwordRef.current?.focus();
+    }, []);
 
     const handleChange = (setter: (v: string) => void) =>
         (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -42,7 +47,7 @@ export default function Password() {
         setLoading(true);
 
         try {
-            await simpleLogin(email, password);
+            await simpleLogin(email, "PASSWORD", password);
 
             const user = await getCurrentUser();
 
@@ -79,6 +84,8 @@ export default function Password() {
                     type="password"
                     value={password}
                     disabled={loading}
+                    ref={passwordRef}
+
                     onChange={handleChange(setPassword)}
                     onKeyDown={(e) => {
                         if (e.key === "Enter" && !loading) {
@@ -108,7 +115,7 @@ export default function Password() {
                 <button
                     disabled={loading}
                     onClick={handleSubmit}
-                    className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] text-black px-4 py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? "Signing in..." : "Submit"}
                 </button>

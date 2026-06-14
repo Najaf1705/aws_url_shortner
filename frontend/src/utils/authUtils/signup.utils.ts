@@ -1,12 +1,12 @@
 import axios from "axios";
 
 
-export async function simpleSignup(name: string, email: string, password: string): Promise<any> {
+export async function simpleSignup(name: string, email: string, password: string, otp?: string, otpId?: string): Promise<any> {
     try {
-                const AUTH_BASE = import.meta.env.VITE_AUTH_BASE as string | undefined;
+        const AUTH_BASE = import.meta.env.VITE_AUTH_BASE as string | undefined;
         const res = await axios.post(
             `${AUTH_BASE}/signup`,
-            { name, email, password },
+            { name, email, password, otpId, otp },
             {
                 withCredentials: true,
             }

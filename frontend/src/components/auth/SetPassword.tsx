@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import AuthLayout from "../AuthLayout";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../../store/hooks";
-import { setUser } from "../../store/slices/authSlice";
-import { getCurrentUser } from "../../utils/authUtils/user.utils";
 import { simpleSignup } from "../../utils/authUtils/signup.utils";
 
 
 export default function SetPassword() {
   const location = useLocation();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
   const [password, setPassword] = useState("");
 
@@ -20,10 +16,10 @@ export default function SetPassword() {
   const [email] = useState(location.state?.email ?? "");
   const [name] = useState(location.state?.name ?? "");
   const [loading, setLoading] = useState(false);
-  const nameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    nameRef.current?.focus();
+    passwordRef.current?.focus();
   }, []);
 
   const handleChange = (setter: (v: string) => void) =>
@@ -58,27 +54,17 @@ export default function SetPassword() {
   async function handleSubmit() {
     if (!validate()) return;
     setErrEntities("")
-
     setLoading(true);
 
     try {
-      await simpleSignup(name, email, password);
-
-      const user = await getCurrentUser();
-
-      dispatch(setUser(user));
-
-      navigate("/", {
-        replace: true,
-      });
-    } catch (err) {
-      // setErrEntities("password");
-
-      setErr([
-        err instanceof Error
-          ? err.message
-          : "Login failed",
-      ]);
+      const signupResponse = await simpleSignup(name, email, password);
+      console.log("signupResponse: ",signupResponse);
+      if(signupResponse.code="EMAIL_VERIFICATION_REQUIRED"){
+        navigate("/otp",{
+          state: {email, name, password, otpId: signupResponse.otpId}
+        })
+        return;
+      }
     } finally {
       setLoading(false);
     }
@@ -99,7 +85,7 @@ export default function SetPassword() {
           <input
             type="password"
             value={password}
-            ref={nameRef}
+            ref={passwordRef}
 
             disabled={loading}
             onChange={handleChange(setPassword)}
@@ -143,8 +129,8 @@ export default function SetPassword() {
       <div className="flex justify-end px-4 py-3">
         <button
           onClick={handleSubmit}
-          className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold"
-        >
+          disabled={loading}
+          className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black  disabled:opacity-50 disabled:cursor-not-allowed" >
           Save Password
         </button>
       </div>

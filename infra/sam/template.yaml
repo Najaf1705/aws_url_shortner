@@ -18,6 +18,16 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: prod
+      CorsConfiguration:
+        AllowCredentials: true
+        AllowOrigins:
+          - http://localhost:5173
+          - https://shorty.najaf.in
+        AllowMethods:
+          - "*"
+        AllowHeaders:
+          - Content-Type
+          - Authorization
 
   UrlTable:
     Type: AWS::DynamoDB::Table

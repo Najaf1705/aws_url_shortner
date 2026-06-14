@@ -3,17 +3,27 @@ import { ddb } from "../lib/dynamo";
 import { config } from "../lib/config";
 import { randomBase62 } from "../lib/base62";
 import { validateLongUrl } from "../lib/validate";
-import { json } from "../lib/response";
+import { response } from "../lib/response";
 import type { CreateLinkBody, UrlItem } from "../lib/types";
+import { verifyAccessToken } from "../lib/jwt";
+import { getAuthenticatedUser } from "../lib/authUtils";
 
 const DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const MAX_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
 const MAX_RETRIES = 8;
 
 export const handler = async (event: any) => {
+  const origin = event.headers.origin ?? event.headers.Origin;
+
   try {
+    const payload = await getAuthenticatedUser(event);
+    const userId = payload.sub;
+
     const body: CreateLinkBody = event?.body ? JSON.parse(event.body) : null;
-    if (!body?.longUrl) return json(400, { message: "longUrl is required" });
+    if (!body?.longUrl) return response(
+      { message: "LongUrl is required" },
+      { statusCode: 400, origin }
+    );
 
     validateLongUrl(body.longUrl);
 
@@ -32,6 +42,7 @@ export const handler = async (event: any) => {
       const item: UrlItem = {
         code,
         clickCount: 0,
+        userId,
         longUrl: body.longUrl,
         createdAt: now.toISOString(),
         expireAt,
@@ -48,7 +59,10 @@ export const handler = async (event: any) => {
         );
 
         // In Phase 1 we return code; frontend can build shortUrl using API base or custom domain later
-        return json(201, { code, expireAt });
+        return response(
+          { message: "URL generated", code, expireAt },
+          { statusCode: 201, origin }
+        );
       } catch (err: any) {
         // ConditionalCheckFailedException => collision, retry
         if (err?.name === "ConditionalCheckFailedException") continue;
@@ -56,10 +70,20 @@ export const handler = async (event: any) => {
       }
     }
 
-    return json(503, { message: "Failed to generate unique code, try again" });
+    return response({ message: "Failed to generate unique code, try again" }, { statusCode: 503, origin });
   } catch (e: any) {
-    console.error("createLink error", e);
-    return json(500, { message: "Internal error" });
+    if (
+      e.message === "UNAUTHENTICATED" ||
+      e.message === "INVALID_TOKEN"
+    ) {
+      return response(
+        { message: "User not authenticated" },
+        { statusCode: 401, origin }
+      );
+    }
+
+    throw e;
+
   }
 };
 

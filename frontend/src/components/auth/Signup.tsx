@@ -101,8 +101,7 @@ export default function Signup() {
 
           <button
             onClick={handleSignup}
-            className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold"
-          >
+  className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black"          >
             Continue
           </button>
         </div>
