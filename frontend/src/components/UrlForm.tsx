@@ -1,4 +1,9 @@
 
+import axios from "axios";
+import { useState } from "react";
+import { nowHHMMSS } from "../utils/nowHHMMSS";
+import type { CreateResponse } from "../pages/Home";
+
 type Props = {
     longUrl: string;
     setLongUrl: (v: string) => void;
@@ -6,13 +11,64 @@ type Props = {
     setExpirySeconds: (v: number) => void;
     useDefaultExpiry: boolean;
     setUseDefaultExpiry: (v: boolean) => void;
-    loading: boolean;
-    err: string[];
-    createShortUrl: () => void;
     fillExample: () => void;
+    onCreated: (res: CreateResponse, genTime: string) => void;
 };
 
-export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpirySeconds, setUseDefaultExpiry, useDefaultExpiry, createShortUrl, loading, fillExample, err}: Props) {
+export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpirySeconds, setUseDefaultExpiry, useDefaultExpiry, fillExample, onCreated }: Props) {
+    const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
+    const [loading, setLoading] = useState(false);
+    const [err, setErr] = useState<string[]>([]);
+
+    const createShortUrl = async () => {
+        setErr([]);
+        if (!API_BASE) {
+            setErr((e) => [...e, "API Base missing"]);
+            return;
+        }
+
+        const trimmed = longUrl.trim();
+        if (!trimmed) {
+            setErr((e) => [...e, "Error: Destination URL is required."]);
+            return;
+        }
+
+        try {
+            new URL(trimmed);
+        } catch {
+            setErr((e) => [...e, "Error: Enter a valid URL"]);
+            return;
+        }
+
+        if (!useDefaultExpiry && expirySeconds < 60) {
+            setErr((e) => [...e, "Expiry must be > 60 secs"]);
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const payload: any = { longUrl: trimmed };
+            if (!useDefaultExpiry) payload.expiresInSeconds = expirySeconds;
+
+            const { data } = await axios.post<CreateResponse>(
+                `${API_BASE}/link`,
+                payload,
+                {
+                    headers: { "Content-Type": "application/json" },
+                    withCredentials: true,
+                }
+            );
+
+            const genTime = nowHHMMSS();
+            onCreated(data, genTime);
+        } catch (e: any) {
+            const message = e.response?.data?.message || e.response?.data || e.message || "Something went wrong";
+            setErr((errState) => [...errState, message]);
+        } finally {
+            setLoading(false);
+        }
+    }
     return (
         <>
             <div className="px-4 py-3.5 ">
@@ -80,7 +136,7 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
             <div className="flex items-center justify-end gap-3 px-4 py-3.5">
                 <button
                     className="border-2 border-text bg-text text-bg px-4.5 py-2.5 text-[15px] cursor-pointer shadow-[0_1px_0_rgba(0,0,0,.15)] disabled:opacity-60 disabled:cursor-not-allowed"
-                    onClick={fillExample}
+                    onClick={() => { setErr([]); fillExample(); }}
                     disabled={loading}
                 >
                     Fill example
@@ -94,13 +150,11 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
                     {loading ? "Creating..." : "Create Short URL"}
                 </button>
             </div>
-
             {err.length > 0 && (
-              <div className="mx-4 mb-3.5 border-2 border-[#f3c3cc] bg-[#fdecef] px-3.5 py-3 font-mono text-[13px] text-black">
-                {err.map((e, i) => <div key={i}>{e}</div>)}
-              </div>
+                <div className="mx-4 mb-3.5 border-2 border-[#f3c3cc] bg-[#fdecef] px-3.5 py-3 font-mono text-[13px] text-black">
+                    {err.map((e, i) => <div key={i}>{e}</div>)}
+                </div>
             )}
-
         </>
     )
 }

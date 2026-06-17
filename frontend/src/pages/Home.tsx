@@ -4,9 +4,7 @@ import Header from "../components/Header";
 import UrlForm from "../components/UrlForm";
 import ResultCard from "../components/ResultCard";
 
-import { isValidUrl } from "../utils/isValidUrl";
-import { nowHHMMSS } from "../utils/nowHHMMSS";
-import axios from "axios";
+// URL creation moved into UrlForm component
 
 export type CreateResponse = {
     code: string;
@@ -25,12 +23,11 @@ export default function App() {
     const [longUrl, setLongUrl] = useState("");
     const [expirySeconds, setExpirySeconds] = useState(3600);
     const [useDefaultExpiry, setUseDefaultExpiry] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState<string[]>([]);
     const [result, setResult] = useState<CreateResponse | null>(null);
     const [generationTime, setGenerationTime] = useState<string | null>(null);
     const [displayResult, setDisplayResult] = useState(false);
     const [copiedKey, setCopiedKey] = useState<CopyKey>(null);
+    // errors/loading handled inside UrlForm
 
     const shortUrl = useMemo(() => {
         if (!result || !API_BASE) return null;
@@ -62,95 +59,19 @@ export default function App() {
             })()
             : null;
 
-    async function createShortUrl() {
-        setErr([]);
-        setResult(null);
-
-        if (!API_BASE) {
-            setErr((e) => [
-                ...e,
-                "API Base missing",
-            ]);
-            return;
-        }
-
-        const trimmed = longUrl.trim();
-
-        if (!trimmed) {
-            setErr((e) => [
-                ...e,
-                "Error: Destination URL is required.",
-            ]);
-            return;
-        }
-
-        if (!isValidUrl(trimmed)) {
-            setErr((e) => [
-                ...e,
-                "Error: Enter a valid URL",
-            ]);
-            return;
-        }
-
-        setLoading(true);
-
-        try {
-            const payload: any = {
-                longUrl: trimmed,
-            };
-
-            if (!useDefaultExpiry) {
-                if (expirySeconds < 60) {
-                    setErr((e) => [
-                        ...e,
-                        "Expiry must be > 60 secs",
-                    ]);
-                    return;
-                }
-
-                payload.expiresInSeconds =
-                    expirySeconds;
-            }
-
-            const { data } = await axios.post<CreateResponse>(
-                `${API_BASE}/links`,
-                payload,
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    withCredentials: true,
-                }
-            );
-
-            setResult(data);
-            setGenerationTime(nowHHMMSS());
-            setDisplayResult(true);
-        } catch (e: any) {
-            const message =
-                e.response?.data?.message ||
-                e.response?.data ||
-                e.message ||
-                "Something went wrong";
-
-            setErr((err) => [
-                ...err,
-                message,
-            ]);
-        } finally {
-            setLoading(false);
-        }
+    function onCreated(data: CreateResponse, genTime: string) {
+        setResult(data);
+        setGenerationTime(genTime);
+        setDisplayResult(true);
     }
 
     function fillExample() {
         setLongUrl("https://najaf.in");
         setExpirySeconds(86400);
         setUseDefaultExpiry(false);
-        setErr([]);
     }
 
     function clearAll() {
-        setErr([]);
         setResult(null);
         setLongUrl("");
         setExpirySeconds(3600);
@@ -178,10 +99,7 @@ export default function App() {
                 );
             }, 900);
         } catch {
-            setErr((e) => [
-                ...e,
-                "Error: Copy failed. Your browser may block clipboard access.",
-            ]);
+            console.error("Error: Copy failed. Your browser may block clipboard access.");
         }
     }
 
@@ -209,11 +127,7 @@ export default function App() {
                         setUseDefaultExpiry={
                             setUseDefaultExpiry
                         }
-                        loading={loading}
-                        err={err}
-                        createShortUrl={
-                            createShortUrl
-                        }
+                        onCreated={onCreated}
                         fillExample={fillExample}
                     />
                 ) : (

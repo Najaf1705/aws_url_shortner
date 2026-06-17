@@ -1,43 +1,31 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import AuthLayout from "../AuthLayout";
 import { simpleLogin } from "../../utils/authUtils/login.utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../../store/hooks";
 import { getCurrentUser } from "../../utils/authUtils/user.utils";
 import { setUser } from "../../store/slices/authSlice";
+import { useAuthForm, useAutoFocus } from "./useAuthForm";
 
 export default function Password() {
     const location = useLocation();
     const navigate = useNavigate();
     const dispatch = useAppDispatch();
     const [password, setPassword] = useState("");
-    const [errEntities, setErrEntities] = useState<String>("");
-    const [err, setErr] = useState<String[]>([]);
+    const { err, errEntities, handleChange, setFieldError, setErr } = useAuthForm();
     const [email] = useState(location.state?.email ?? "");
     const [loading, setLoading] = useState(false);
-    const passwordRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        passwordRef.current?.focus();
-    }, []);
-
-    const handleChange = (setter: (v: string) => void) =>
-        (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            setter(e.target.value);
-            setErrEntities("");
-            setErr([]);
-        };
+    const passwordRef = useAutoFocus<HTMLInputElement>();
 
     const validate = () => {
         if (!password.trim()) {
-            setErr(["Password is required"]);
-            setErrEntities("password");
+            setFieldError("password", ["Password is required"]);
             return false;
         }
 
         setErr([]);
         return true;
-    }
+    };
 
 
 
@@ -56,14 +44,9 @@ export default function Password() {
             navigate("/", {
                 replace: true,
             });
-        } catch (err) {
-            setErrEntities("password");
-
-            setErr([
-                err instanceof Error
-                    ? err.message
-                    : "Login failed",
-            ]);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            setFieldError("password", [msg]);
         } finally {
             setLoading(false);
         }
@@ -73,6 +56,7 @@ export default function Password() {
         <AuthLayout
             title="PASSWORD"
             subtitle="Enter your password"
+            err={err}
         >
             <div className="px-4 py-4">
 
@@ -120,11 +104,6 @@ export default function Password() {
                     {loading ? "Signing in..." : "Submit"}
                 </button>
             </div>
-            {err.length > 0 && (
-                <div className="mx-4 mb-3.5 border-2 border-[#f3c3cc] bg-[#fdecef] px-3.5 py-3 font-mono text-[13px] text-black">
-                    {err.map((e, i) => <div key={i}>{e}</div>)}
-                </div>
-            )}
         </AuthLayout>
     );
 }

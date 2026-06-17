@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent } from "react";
 import AuthLayout from "../AuthLayout";
 import { simpleSignup } from "../../utils/authUtils/signup.utils";
-import { getCurrentUser } from "../../utils/authUtils/user.utils";
+import { getCurrentUser, getCurrentUserLinks } from "../../utils/authUtils/user.utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../../store/hooks";
 import { setUser } from "../../store/slices/authSlice";
+import { useAuthForm } from "./useAuthForm";
 import { simpleLogin } from "../../utils/authUtils/login.utils";
 
 type OtpMode = "signup" | "login" | "reset" | "verify";
@@ -24,8 +25,7 @@ export default function Otp(props: OtpProps = {}) {
   const dispatch = useAppDispatch();
   const [otpArr, setOtpArr] = useState<string[]>(Array(DIGITS).fill(""));
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string[]>([]);
-  const [errEntities, setErrEntities] = useState<string | null>(null);
+  const { err, errEntities, setErrEntities, setErr } = useAuthForm();
 
   const [email] = useState(location.state?.email ?? "");
   const [name] = useState(location.state?.name ?? "");
@@ -41,7 +41,6 @@ export default function Otp(props: OtpProps = {}) {
   }, []);
 
   const setDigit = (index: number, value: string) => {
-    // allow only single digit (0-9) or empty
     if (value !== "" && !/^[0-9]$/.test(value)) return;
     setOtpArr((prev) => {
       const next = [...prev];
@@ -50,14 +49,13 @@ export default function Otp(props: OtpProps = {}) {
     });
   };
 
-  const handleChange = (index: number) => (e: ChangeEvent<HTMLInputElement>) => {
+  const handleDigitChange = (index: number) => (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.slice(-1);
     setDigit(index, val);
     if (val && index < DIGITS - 1) {
       inputsRef.current[index + 1]?.focus();
       inputsRef.current[index + 1]?.select();
     }
-    setErrEntities("");
   };
 
   const handleKeyDown = (index: number) => (e: KeyboardEvent<HTMLInputElement>) => {
@@ -147,6 +145,7 @@ export default function Otp(props: OtpProps = {}) {
     <AuthLayout
       title="VERIFY OTP"
       subtitle="Enter the code sent to your email"
+      err={err}
     >
       <div className="px-4 py-6">
 
@@ -160,7 +159,7 @@ export default function Otp(props: OtpProps = {}) {
               inputMode="numeric"
               pattern="[0-9]*"
               value={otpArr[i]}
-              onChange={handleChange(i)}
+              onChange={handleDigitChange(i)}
               onKeyDown={handleKeyDown(i)}
               onPaste={handlePaste(i)}
               className={`w-12 h-12 ${errEntities === "otp" ? "border-red-500" : "border-[#6b6b6b]"} text-center border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:bg-gray-400 disabled:cursor-not-allowed`} />
@@ -187,11 +186,7 @@ export default function Otp(props: OtpProps = {}) {
           </button>
         </div>
       </div>
-      {err.length > 0 && (
-        <div className="mx-4 mb-3.5 border-2 border-[#f3c3cc] bg-[#fdecef] px-3.5 py-3 font-mono text-[13px] text-black">
-          {err.map((e, i) => <div key={i}>{e}</div>)}
-        </div>
-      )}
+      {/* errors displayed by AuthLayout */}
     </AuthLayout>
   );
 }

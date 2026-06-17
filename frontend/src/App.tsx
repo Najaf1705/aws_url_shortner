@@ -16,6 +16,7 @@ import GuestRoute from "./routes/GuestRoute";
 import PasswordRoute from "./routes/PasswordRoute";
 import OtpRoute from "./routes/OtpRoute";
 import SetPasswordRoute from "./routes/SetPasswordRoute";
+import LinksTable from "./components/LinksTable";
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -25,12 +26,8 @@ export default function App() {
     const bootstrap =
       async () => {
         try {
-          const user =
-            await getCurrentUser();
-
-          dispatch(
-            setUser(user)
-          );
+          const user = await getCurrentUser();
+          dispatch(setUser(user));
         } catch {
           dispatch(
             logout()
@@ -70,6 +67,7 @@ export default function App() {
       </Route> */}
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/links" element={<LinksTable />} />
 
         <Route
           path="/login"

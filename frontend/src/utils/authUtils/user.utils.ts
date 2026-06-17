@@ -11,3 +11,15 @@ export async function getCurrentUser() {
 
     return res.data;
 }
+
+export async function getCurrentUserLinks() {
+    const AUTH_BASE = import.meta.env.VITE_API_BASE as string | undefined;
+    const res = await axios.get(
+        `${AUTH_BASE}/links`,
+        {
+            withCredentials: true,
+        }
+    );
+
+    return res.data;
+}

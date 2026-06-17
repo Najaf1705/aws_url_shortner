@@ -1,42 +1,29 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import AuthLayout from "../AuthLayout";
 import { Link, useNavigate } from "react-router-dom";
 import { simpleLogin } from "../../utils/authUtils/login.utils";
+import { useAuthForm, useAutoFocus } from "./useAuthForm";
 
 export default function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
-    const [errEntities, setErrEntities] = useState<String>();
-    const [err, setErr] = useState<String[]>([]);
-    const nameRef = useRef<HTMLInputElement>(null);
+    const { err, errEntities, handleChange, setFieldError, setErr } = useAuthForm();
+    const nameRef = useAutoFocus<HTMLInputElement>();
     const [sendingOtp, setSendingOtp] = useState<boolean>(false);
-
-    useEffect(() => {
-        nameRef.current?.focus();
-    }, []);
-
-    const handleChange = (setter: (v: string) => void) =>
-        (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            setter(e.target.value);
-            setErrEntities("");
-            setErr([]);
-        };
 
     const validate = () => {
         if (!email.trim()) {
-            setErr(["Email is required"]);
-            setErrEntities("email");
+            setFieldError("email", ["Email is required"]);
             return false;
         }
 
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setErr(["Enter a valid email"]);
-            setErrEntities("email");
+            setFieldError("email", ["Enter a valid email"]);
             return false;
         }
         setErr([]);
         return true;
-    }
+    };
 
 
     async function usePassword() {
@@ -72,6 +59,7 @@ export default function Login() {
         <AuthLayout
             title="LOGIN"
             subtitle="Enter your email to continue"
+            err={err}
         >
             <div className="px-4 py-4">
 
@@ -115,11 +103,6 @@ export default function Login() {
                     </button>
                 </div>
             </div>
-            {err.length > 0 && (
-                <div className="mx-4 mb-3.5 border-2 border-[#f3c3cc] bg-[#fdecef] px-3.5 py-3 font-mono text-[13px] text-black ">
-                    {err.map((e, i) => <div key={i}>{e}</div>)}
-                </div>
-            )}
         </AuthLayout>
     );
 }

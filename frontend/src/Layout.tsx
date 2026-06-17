@@ -1,6 +1,7 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import ThemeToggle from "./components/ThemeToggle";
 import UserStatus from "./components/auth/UserStatus";
+import LinksButton from "./components/LinksButton";
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function Layout() {
           <h1 className="shadow-game mt-1.5 mb-1.5 text-[28px] leading-tight font-bold">Shorty</h1>
         </div>
       <div className="flex gap-2">
+        <LinksButton/>
         <UserStatus />
         <ThemeToggle />
       </div>

@@ -11,7 +11,8 @@ Globals:
     Environment:
       Variables:
         LOG_LEVEL: info
-        CODE_LENGTH: "4" # Levi's Phase 1 choice
+        CODE_LENGTH: 7
+        JWT_SECRET: replace-with-something-long
 
 Resources:
   HttpApi:
@@ -29,20 +30,33 @@ Resources:
           - Content-Type
           - Authorization
 
+
+
   UrlTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: url-shortener-urls
       BillingMode: PAY_PER_REQUEST
+
       AttributeDefinitions:
         - AttributeName: code
           AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+
       KeySchema:
         - AttributeName: code
           KeyType: HASH
-      TimeToLiveSpecification:
-        AttributeName: expireAt
-        Enabled: true
+
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+
 
   ClickEventsQueue:
     Type: AWS::SQS::Queue
@@ -61,10 +75,30 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
-            Path: /links
+            Path: /link
             Method: POST
       Policies:
         - DynamoDBWritePolicy:
+            TableName: !Ref UrlTable
+      Environment:
+        Variables:
+          URL_TABLE_NAME: !Ref UrlTable
+
+
+  GetLinksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: dist/handlers/getLinks.handler
+      Events:
+        CreateLinkRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /links
+            Method: GET
+      Policies:
+        - DynamoDBCrudPolicy:
             TableName: !Ref UrlTable
       Environment:
         Variables:
@@ -108,8 +142,12 @@ Resources:
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref UrlTable
+      Environment:
+        Variables:
+          URL_TABLE_NAME: !Ref UrlTable
 
 Outputs:
   ApiBaseUrl:
     Description: Base URL for HTTP API
-    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Value:
+      Fn::Sub: https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/prod

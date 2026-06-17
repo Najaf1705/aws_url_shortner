@@ -1,68 +1,51 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useState } from "react";
 import AuthLayout from "../AuthLayout";
 import { useLocation, useNavigate } from "react-router-dom";
 import { simpleSignup } from "../../utils/authUtils/signup.utils";
-
+import { useAuthForm, useAutoFocus } from "./useAuthForm";
 
 export default function SetPassword() {
   const location = useLocation();
   const navigate = useNavigate();
 
   const [password, setPassword] = useState("");
-
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [err, setErr] = useState<String[]>([]);
-  const [errEntities, setErrEntities] = useState<String>("");
+  const { err, errEntities, handleChange, setFieldError, setErr } = useAuthForm();
   const [email] = useState(location.state?.email ?? "");
   const [name] = useState(location.state?.name ?? "");
   const [loading, setLoading] = useState(false);
-  const passwordRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    passwordRef.current?.focus();
-  }, []);
-
-  const handleChange = (setter: (v: string) => void) =>
-    (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setter(e.target.value);
-      setErrEntities("");
-      setErr([]);
-    };
+  const passwordRef = useAutoFocus<HTMLInputElement>();
 
   const validate = () => {
     if (!password.trim() && !confirmPassword.trim()) {
-      setErr(["Password is required"]);
-      setErrEntities("password");
+      setFieldError("password", ["Password is required"]);
       return false;
     }
     if (password.trim() !== confirmPassword.trim()) {
-      setErr(["Passwords do not match"]);
-      setErrEntities("password");
+      setFieldError("password", ["Passwords do not match"]);
       return false;
     }
 
     if (password.trim().length < 4) {
-      setErr(["Atleast 4 chars required"]);
-      setErrEntities("password");
+      setFieldError("password", ["Atleast 4 chars required"]);
       return false;
     }
 
     setErr([]);
     return true;
-  }
+  };
 
   async function handleSubmit() {
     if (!validate()) return;
-    setErrEntities("")
+    setErr([]);
     setLoading(true);
 
     try {
       const signupResponse = await simpleSignup(name, email, password);
-      console.log("signupResponse: ",signupResponse);
-      if(signupResponse.code="EMAIL_VERIFICATION_REQUIRED"){
-        navigate("/otp",{
-          state: {email, name, password, otpId: signupResponse.otpId}
-        })
+      if (signupResponse.code === "EMAIL_VERIFICATION_REQUIRED") {
+        navigate("/otp", {
+          state: { email, name, password, otpId: signupResponse.otpId },
+        });
         return;
       }
     } finally {
@@ -74,6 +57,7 @@ export default function SetPassword() {
     <AuthLayout
       title="SET PASSWORD"
       subtitle="Create a password"
+      err={err}
     >
       <div className="px-4 py-4 space-y-4">
 
@@ -94,10 +78,7 @@ export default function SetPassword() {
                 handleSubmit();
               }
             }}
-            className={`w-full ${errEntities === "password"
-              ? "border-red-500"
-              : "border-[#6b6b6b]"
-              } border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:bg-gray-400 disabled:cursor-not-allowed`}
+            className={`w-full ${errEntities === "password" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:bg-gray-400 disabled:cursor-not-allowed`}
           />
         </div>
         <div>
@@ -115,10 +96,7 @@ export default function SetPassword() {
                 handleSubmit();
               }
             }}
-            className={`w-full ${errEntities === "password"
-              ? "border-red-500"
-              : "border-[#6b6b6b]"
-              } border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:bg-gray-400 disabled:cursor-not-allowed`}
+            className={`w-full ${errEntities === "password" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:bg-gray-400 disabled:cursor-not-allowed`}
           />
 
         </div>
@@ -134,11 +112,7 @@ export default function SetPassword() {
           Save Password
         </button>
       </div>
-      {err.length > 0 && (
-        <div className="mx-4 mb-3.5 border-2 border-[#f3c3cc] bg-[#fdecef] px-3.5 py-3 font-mono text-[13px] text-black">
-          {err.map((e, i) => <div key={i}>{e}</div>)}
-        </div>
-      )}
+      {/* errors shown by AuthLayout */}
     </AuthLayout>
   );
 }
