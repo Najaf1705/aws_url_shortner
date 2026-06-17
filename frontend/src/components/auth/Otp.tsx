@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent } from "react";
 import AuthLayout from "../AuthLayout";
 import { simpleSignup } from "../../utils/authUtils/signup.utils";
-import { getCurrentUser, getCurrentUserLinks } from "../../utils/authUtils/user.utils";
+import { getCurrentUser } from "../../utils/authUtils/user.utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../../store/hooks";
 import { setUser } from "../../store/slices/authSlice";
