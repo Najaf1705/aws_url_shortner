@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "sam:build": "PATH=$PWD/services/api/node_modules/.bin:$PATH sam build --template-file infra/sam/template.yaml --build-dir infra/sam/.aws-sam/build && chcon -Rt container_file_t infra/sam/.aws-sam/build",
+    "sam:start": "sam local start-api --template-file infra/sam/.aws-sam/build/template.yaml"
+  },
   "devDependencies": {
     "@types/node": "^25.9.1"
   }

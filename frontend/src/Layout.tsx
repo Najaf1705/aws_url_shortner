@@ -9,7 +9,7 @@ export default function Layout() {
     <>
       <div className="fixed w-full top-4 z-50 flex  px-6 items-center justify-between">
         <div className="flex gap-2 items-center cursor-pointer"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/",{replace: true})}
           title="Create URLs"
         >
           <img src="./favicon-32x32.png" alt="" className="rounded-xl" />

@@ -1,19 +1,20 @@
 import { validateLongUrl } from "../lib/validate";
 import { response } from "../lib/response";
 import type { CreateLinkBody } from "../lib/types";
-import { getAuthenticatedUser } from "../lib/authUtils";
-import { createLink } from "../lib/linkUtils";
+import { getOptionalAuthenticatedUser, getCookie } from "../lib/authUtils";
+import { countActiveUserLinks, createLink, toGuestUserId } from "../lib/linkUtils";
+import { randomBase62 } from "../lib/base62";
 
 const DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const MAX_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
+const MAX_GUEST_LINKS = 3;
 
 export const handler = async (event: any) => {
-  const origin = event.headers.origin ?? event.headers.Origin;
+  const headers = event.headers ?? {};
+  const origin = headers.origin ?? headers.Origin;
+  console.log("origim: ", origin)
 
   try {
-    const payload = await getAuthenticatedUser(event);
-    const userId = payload.sub;
-
     const body: CreateLinkBody | null = event?.body
       ? JSON.parse(event.body)
       : null;
@@ -27,6 +28,39 @@ export const handler = async (event: any) => {
     }
 
     validateLongUrl(body.longUrl);
+
+    const payload = await getOptionalAuthenticatedUser(event);
+
+    // Prefer cookie, then header, then body. If still missing and unauthenticated,
+    // generate a guest id server-side and set it as an HttpOnly cookie.
+    const cookieGuest = getCookie(event, "shorty-guest-id");
+    const headerGuest = headers["shorty-guest-id"] ?? headers["Shorty-Guest-Id"] ?? body?.guestId;
+    let guestId = cookieGuest ?? headerGuest ?? null;
+
+    let extraHeaders: Record<string, string> | undefined;
+
+    if (!payload && !guestId) {
+      // create server-side guest id
+      guestId = randomBase62(16);
+      // set cookie for 1 year (secure, cross-site compatible)
+      const maxAge = 60 * 60 * 24 * 365; // 1 year in seconds
+      extraHeaders = {
+        "Set-Cookie": `shorty-guest-id=${guestId}; Domain=.najaf.in; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=None`,
+      };
+    }
+
+    const userId = payload?.sub ?? toGuestUserId((guestId ?? "").toString());
+
+    if (!payload) {
+      const guestLinkCount = await countActiveUserLinks(userId);
+
+      if (guestLinkCount >= MAX_GUEST_LINKS) {
+        return response(
+          { message: "Login to create more than 3 links" },
+          { statusCode: 403, origin }
+        );
+      }
+    }
 
     const ttl = clamp(
       body.expiresInSeconds ?? DEFAULT_TTL_SECONDS,
@@ -48,7 +82,7 @@ export const handler = async (event: any) => {
         code: link.code,
         expireAt: link.expireAt,
       },
-      { statusCode: 201, origin }
+      { statusCode: 201, origin, headers: extraHeaders }
     );
   } catch (e: any) {
     if (
@@ -68,6 +102,13 @@ export const handler = async (event: any) => {
       return response(
         { message: "User not authenticated" },
         { statusCode: 401, origin }
+      );
+    }
+
+    if (e.message === "INVALID_GUEST_ID") {
+      return response(
+        { message: "Guest session missing" },
+        { statusCode: 400, origin }
       );
     }
 

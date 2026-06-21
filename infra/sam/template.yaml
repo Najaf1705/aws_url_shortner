@@ -10,6 +10,7 @@ Globals:
     Tracing: Active
     Environment:
       Variables:
+        ALLOWED_ORIGINS: http://localhost:5173, https://shorty.najaf.in
         LOG_LEVEL: info
         CODE_LENGTH: 7
         JWT_SECRET: replace-with-something-long
@@ -29,6 +30,7 @@ Resources:
         AllowHeaders:
           - Content-Type
           - Authorization
+          - Shorty-Guest-Id
 
 
 
@@ -62,14 +64,14 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: url-shortener-click-events
-      VisibilityTimeout: 30
+      VisibilityTimeout: 90
       MessageRetentionPeriod: 345600 # 4 days
 
   CreateLinkFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../../services/api
-      Handler: dist/handlers/createLink.handler
+      Handler: createLink.handler
       Events:
         CreateLinkRoute:
           Type: HttpApi
@@ -78,20 +80,29 @@ Resources:
             Path: /link
             Method: POST
       Policies:
-        - DynamoDBWritePolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref UrlTable
       Environment:
         Variables:
           URL_TABLE_NAME: !Ref UrlTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/createLink.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
 
 
   GetLinksFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../../services/api
-      Handler: dist/handlers/getLinks.handler
+      Handler: getLinks.handler
       Events:
-        CreateLinkRoute:
+        GetLinksRoute:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
@@ -103,12 +114,48 @@ Resources:
       Environment:
         Variables:
           URL_TABLE_NAME: !Ref UrlTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/getLinks.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
+  ClaimGuestLinksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: claimGuestLinks.handler
+      Events:
+        ClaimGuestLinksRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /links/claim
+            Method: POST
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UrlTable
+      Environment:
+        Variables:
+          URL_TABLE_NAME: !Ref UrlTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/claimGuestLinks.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
 
   RedirectFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../../services/api
-      Handler: dist/handlers/redirect.handler
+      Handler: redirect.handler
       Events:
         RedirectRoute:
           Type: HttpApi
@@ -125,12 +172,21 @@ Resources:
         Variables:
           URL_TABLE_NAME: !Ref UrlTable
           CLICK_QUEUE_URL: !Ref ClickEventsQueue
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/redirect.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
 
   AnalyticsWorkerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../../services/api
-      Handler: dist/handlers/analyticsWorker.handler
+      Handler: analyticsWorker.handler
       Timeout: 15
       MemorySize: 256
       Events:
@@ -145,6 +201,15 @@ Resources:
       Environment:
         Variables:
           URL_TABLE_NAME: !Ref UrlTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/analyticsWorker.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
 
 Outputs:
   ApiBaseUrl:

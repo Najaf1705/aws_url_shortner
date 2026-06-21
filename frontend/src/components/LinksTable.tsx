@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { fetchLinks } from "../store/slices/links/linksThunks";
+import { Link } from "react-router-dom";
 
 export default function LinksTable() {
     const dispatch = useAppDispatch();
@@ -16,6 +17,8 @@ export default function LinksTable() {
         }
     };
 
+    const visibleLinks = links.filter((link) => link.expireAt > Math.floor(Date.now() / 1000));
+
     useEffect(() => {
         dispatch(fetchLinks());
     }, [dispatch]);
@@ -23,7 +26,7 @@ export default function LinksTable() {
     if (error) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center px-3 py-4 sm:px-5 sm:py-5">
-                <div className="w-full max-w-[980px] rounded-md bg-bg border-2 border-text shadow-[0_18px_90px_rgba(0,203,210,.25)]">
+                <div className="w-full max-w-245 rounded-md bg-bg border-2 border-text shadow-[0_18px_90px_rgba(0,203,210,.25)]">
                     <div className="px-3 py-5 text-center font-mono text-sm text-red-600 sm:px-4 sm:py-6 sm:text-base">{error}</div>
                 </div>
             </div>
@@ -50,10 +53,13 @@ export default function LinksTable() {
                     <div className="links-list links-scroll flex flex-col font-mono">
                         {linksIsLoading ? (
                             <div className="px-3 py-8 text-center text-text">Loading...</div>
-                        ) : links.length === 0 ? (
-                            <div className="px-3 py-8 text-center text-text">No links found</div>
+                        ) : visibleLinks.length === 0 ? (
+                            <div className="px-3 py-8 text-center text-text">
+                                {"No links found. "}
+                                <Link to={"/"} replace className="text-[#4cda91]">Create Shorties</Link>
+                            </div>
                         ) : (
-                            links.map((l) => {
+                            visibleLinks.map((l) => {
                                 const shortUrl = `${SHORT_BASE}/${l.code}`;
 
                                 return (

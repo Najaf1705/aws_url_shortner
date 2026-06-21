@@ -3,6 +3,7 @@ import axios from "axios";
 import { useState } from "react";
 import { nowHHMMSS } from "../utils/nowHHMMSS";
 import type { CreateResponse } from "../pages/Home";
+// guest id is now managed by backend cookie
 
 type Props = {
     longUrl: string;
@@ -11,17 +12,27 @@ type Props = {
     setExpirySeconds: (v: number) => void;
     useDefaultExpiry: boolean;
     setUseDefaultExpiry: (v: boolean) => void;
-    fillExample: () => void;
     onCreated: (res: CreateResponse, genTime: string) => void;
 };
 
-export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpirySeconds, setUseDefaultExpiry, useDefaultExpiry, fillExample, onCreated }: Props) {
+export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpirySeconds, setUseDefaultExpiry, useDefaultExpiry, onCreated }: Props) {
     const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState<string[]>([]);
+    const [errEntities, setErrEntities] = useState<string>("");
+
+
+    function fillExample() {
+        setErr([])
+        setErrEntities("");
+        setLongUrl("https://najaf.in");
+        setExpirySeconds(86400);
+        setUseDefaultExpiry(false);
+    }
 
     const createShortUrl = async () => {
         setErr([]);
+        setErrEntities("")
         if (!API_BASE) {
             setErr((e) => [...e, "API Base missing"]);
             return;
@@ -30,6 +41,7 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
         const trimmed = longUrl.trim();
         if (!trimmed) {
             setErr((e) => [...e, "Error: Destination URL is required."]);
+            setErrEntities("URL_INPUT")
             return;
         }
 
@@ -37,11 +49,13 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
             new URL(trimmed);
         } catch {
             setErr((e) => [...e, "Error: Enter a valid URL"]);
+            setErrEntities("URL_INPUT")
             return;
         }
 
         if (!useDefaultExpiry && expirySeconds < 60) {
             setErr((e) => [...e, "Expiry must be > 60 secs"]);
+            setErrEntities("EXPIRY_INPUT")
             return;
         }
 
@@ -55,7 +69,9 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
                 `${API_BASE}/link`,
                 payload,
                 {
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
                     withCredentials: true,
                 }
             );
@@ -75,7 +91,7 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
 
                 <div className="font-mono font-extrabold tracking-widest text-[13px] text-text mb-2">DESTINATION URL</div>
                 <input
-                    className="w-full border-2 border-[#6b6b6b] px-3 py-2.5 font-mono text-[15px] outline-none focus:border-[#111]"
+                    className={`w-full ${errEntities === "URL_INPUT" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:bg-gray-400 disabled:cursor-not-allowed`}
                     type="url"
                     inputMode="url"
                     required
@@ -90,7 +106,7 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
                     <div>
                         <div className="font-mono font-extrabold tracking-widest text-[13px] text-text mb-2">EXPIRY (SECONDS)</div>
                         <input
-                            className="w-full border-2 border-[#6b6b6b] px-3 py-2.5 font-mono text-[15px] outline-none focus:border-[#111] disabled:opacity-60"
+                    className={`w-full ${errEntities === "EXPIRY_INPUT" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:bg-gray-400 disabled:cursor-not-allowed`}
                             type="number"
                             value={expirySeconds}
                             onChange={(e) => setExpirySeconds(Number(e.target.value))}

@@ -36,3 +36,20 @@ export async function getAuthenticatedUser(
     throw new Error("INVALID_TOKEN");
   }
 }
+
+export async function getOptionalAuthenticatedUser(
+  event: any
+) {
+  const token = getCookie(
+    event,
+    "accessToken"
+  );
+
+  if (!token) return null;
+
+  try {
+    return await verifyAccessToken(token);
+  } catch {
+    throw new Error("INVALID_TOKEN");
+  }
+}

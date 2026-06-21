@@ -6,6 +6,7 @@ import { useAppDispatch } from "../../store/hooks";
 import { getCurrentUser } from "../../utils/authUtils/user.utils";
 import { setUser } from "../../store/slices/authSlice";
 import { useAuthForm, useAutoFocus } from "./useAuthForm";
+import { claimGuestLinks } from "../../utils/guestLinks";
 
 export default function Password() {
     const location = useLocation();
@@ -40,6 +41,9 @@ export default function Password() {
             const user = await getCurrentUser();
 
             dispatch(setUser(user));
+            await claimGuestLinks().catch((error) => {
+                console.error("Failed to claim guest links", error);
+            });
 
             navigate("/", {
                 replace: true,

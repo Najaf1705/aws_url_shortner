@@ -1,7 +1,6 @@
 {
-  "name": "url-shortener-api",
+  "name": "shorty",
   "version": "1.0.0",
-  "type": "commonjs",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -12,6 +11,7 @@
     "@aws-sdk/client-dynamodb": "^3.600.0",
     "@aws-sdk/client-sqs": "^3.600.0",
     "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "esbuild": "^0.28.1",
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {

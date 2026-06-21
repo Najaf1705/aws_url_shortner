@@ -1,15 +1,18 @@
-import { GetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "../lib/dynamo";
 import { config } from "../lib/config";
-import { getAuthenticatedUser } from "../lib/authUtils";
+import { getOptionalAuthenticatedUser, getCookie } from "../lib/authUtils";
 import { response } from "../lib/response";
+import { getUserLinks, toGuestUserId } from "../lib/linkUtils";
 
 export const handler = async (event: any) => {
-    const origin = event.headers.origin ?? event.headers.Origin;
+    const headers = event.headers ?? {};
+    const origin = headers.origin ?? headers.Origin;
 
     try {
-        const payload = await getAuthenticatedUser(event);
-        const userId = payload.sub;
+        const payload = await getOptionalAuthenticatedUser(event);
+        const cookieGuest = getCookie(event, "shorty-guest-id");
+        const headerGuest = headers["shorty-guest-id"] ?? headers["Shorty-Guest-Id"];
+        const guestId = cookieGuest ?? headerGuest ?? null;
+        const userId = payload?.sub ?? toGuestUserId(guestId ?? "");
 
         console.log({
             table: config.urlTableName,
@@ -17,29 +20,34 @@ export const handler = async (event: any) => {
             type: typeof userId,
         });
 
-        const res = await ddb.send(
-            new QueryCommand({
-                TableName: config.urlTableName,
-                IndexName: "UserIdIndex",
-                KeyConditionExpression: "userId = :userId",
-                ExpressionAttributeValues: {
-                    ":userId": userId,
-                },
-            })
-        );
+        const links = await getUserLinks(userId);
 
-        console.log("user dets: ", res.Items)
+        console.log("user dets: ", links)
 
         return response(
             {
                 message: "User Links",
-                links: res.Items,
+                links,
             },
-            { statusCode: 201, origin }
+            { statusCode: 200, origin }
         );
 
 
-    } catch (e) {
+    } catch (e: any) {
+        if (e.message === "INVALID_TOKEN") {
+            return response(
+                { message: "User not authenticated" },
+                { statusCode: 401, origin }
+            );
+        }
+
+        if (e.message === "INVALID_GUEST_ID") {
+            return response(
+                { message: "Guest session missing" },
+                { statusCode: 400, origin }
+            );
+        }
+
         console.error(
             "Redirect handler error:",
             e

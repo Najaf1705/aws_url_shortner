@@ -12,10 +12,10 @@ export const fetchLinks = createAsyncThunk<
     try {
       const AUTH_BASE = import.meta.env.VITE_API_BASE as string | undefined;
     const res = await axios.get(
-        `${AUTH_BASE}/links`,
-        {
-            withCredentials: true,
-        }
+      `${AUTH_BASE}/links`,
+      {
+        withCredentials: true,
+      }
     );
 
     if (res.status < 200 || res.status >= 300) {

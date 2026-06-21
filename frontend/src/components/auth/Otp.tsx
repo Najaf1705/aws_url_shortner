@@ -7,6 +7,7 @@ import { useAppDispatch } from "../../store/hooks";
 import { setUser } from "../../store/slices/authSlice";
 import { useAuthForm } from "./useAuthForm";
 import { simpleLogin } from "../../utils/authUtils/login.utils";
+import { claimGuestLinks } from "../../utils/guestLinks";
 
 type OtpMode = "signup" | "login" | "reset" | "verify";
 
@@ -111,11 +112,17 @@ export default function Otp(props: OtpProps = {}) {
         await simpleSignup(name, email, password, otp, otpId);
         const user = await getCurrentUser();
         dispatch(setUser(user));
+        await claimGuestLinks().catch((error) => {
+          console.error("Failed to claim guest links", error);
+        });
         navigate("/", { replace: true });
       } else if (mode === "login") {
         await simpleLogin(email, loginMode, password, otpId, otp);
         const user = await getCurrentUser();
         dispatch(setUser(user));
+        await claimGuestLinks().catch((error) => {
+          console.error("Failed to claim guest links", error);
+        });
         navigate("/", { replace: true });
       } else {
         throw new Error("No verification handler provided for this mode");

@@ -11,32 +11,38 @@ import SetPassword from "./components/auth/SetPassword";
 import { useEffect } from "react";
 import { getCurrentUser } from "./utils/authUtils/user.utils";
 import { useAppDispatch } from "./store/hooks";
-import { logout, setUser } from "./store/slices/authSlice";
+import { logout, setUser, setAuthLoading } from "./store/slices/authSlice";
 import GuestRoute from "./routes/GuestRoute";
 import PasswordRoute from "./routes/PasswordRoute";
 import OtpRoute from "./routes/OtpRoute";
 import SetPasswordRoute from "./routes/SetPasswordRoute";
 import LinksTable from "./components/LinksTable";
+import { claimGuestLinks } from "./utils/guestLinks";
+import Profile from "./components/Profile";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
   const dispatch = useAppDispatch();
 
 
   useEffect(() => {
-    const bootstrap =
-      async () => {
-        try {
-          const user = await getCurrentUser();
-          dispatch(setUser(user));
-        } catch {
-          dispatch(
-            logout()
-          );
-        }
-      };
+    const bootstrap = async () => {
+      dispatch(setAuthLoading(true));
+      try {
+        const user = await getCurrentUser();
+        dispatch(setUser(user));
+        await claimGuestLinks().catch((error) => {
+          console.error("Failed to claim guest links", error);
+        });
+      } catch {
+        dispatch(logout());
+      } finally {
+        dispatch(setAuthLoading(false));
+      }
+    };
 
     bootstrap();
-  }, []);
+  }, [dispatch]);
   return (
     <Routes>
       {/* <Route element={<Layout />}>
@@ -68,6 +74,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/links" element={<LinksTable />} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         <Route
           path="/login"

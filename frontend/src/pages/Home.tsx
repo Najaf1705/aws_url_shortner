@@ -65,11 +65,6 @@ export default function App() {
         setDisplayResult(true);
     }
 
-    function fillExample() {
-        setLongUrl("https://najaf.in");
-        setExpirySeconds(86400);
-        setUseDefaultExpiry(false);
-    }
 
     function clearAll() {
         setResult(null);
@@ -118,17 +113,10 @@ export default function App() {
                         longUrl={longUrl}
                         setLongUrl={setLongUrl}
                         expirySeconds={expirySeconds}
-                        setExpirySeconds={
-                            setExpirySeconds
-                        }
-                        useDefaultExpiry={
-                            useDefaultExpiry
-                        }
-                        setUseDefaultExpiry={
-                            setUseDefaultExpiry
-                        }
+                        setExpirySeconds={setExpirySeconds}
+                        useDefaultExpiry={useDefaultExpiry}
+                        setUseDefaultExpiry={setUseDefaultExpiry}
                         onCreated={onCreated}
-                        fillExample={fillExample}
                     />
                 ) : (
                     result && (

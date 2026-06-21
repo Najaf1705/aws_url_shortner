@@ -1,6 +1,7 @@
 export type CreateLinkBody = {
   longUrl: string;
   expiresInSeconds?: number; // optional; default applied
+  guestId?: string;
 };
 
 export type UrlItem = {

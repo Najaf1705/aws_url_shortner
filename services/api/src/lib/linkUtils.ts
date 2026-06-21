@@ -1,10 +1,12 @@
-import { DeleteCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { ddb } from "../lib/dynamo";
 import { config } from "../lib/config";
 import { UrlItem } from "./types";
 import { randomBase62 } from "./base62";
 
 const MAX_RETRIES = 8;
+const GUEST_USER_PREFIX = "guest#";
+const GUEST_ID_PATTERN = /^[a-zA-Z0-9_-]{12,80}$/;
 
 interface CreateLinkParams {
     userId: string;
@@ -56,7 +58,17 @@ export const createLink = async (
     throw new Error("UNABLE_TO_GENERATE_UNIQUE_CODE");
 };
 
-export const getUserLinks = async (userId: string) => {
+export function toGuestUserId(guestId: string) {
+    const normalized = guestId.trim();
+
+    if (!GUEST_ID_PATTERN.test(normalized)) {
+        throw new Error("INVALID_GUEST_ID");
+    }
+
+    return `${GUEST_USER_PREFIX}${normalized}`;
+}
+
+export const getUserLinks = async (userId: string): Promise<UrlItem[]> => {
     try {
         const result = await ddb.send(
             new QueryCommand({
@@ -69,11 +81,48 @@ export const getUserLinks = async (userId: string) => {
             })
         );
 
-        return result.Items ?? [];
+        return (result.Items ?? []) as UrlItem[];
     } catch (error) {
         console.error("Failed to fetch user links:", error);
         throw new Error("Unable to fetch user links");
     }
+};
+
+export const countActiveUserLinks = async (userId: string) => {
+    const now = Math.floor(Date.now() / 1000);
+    const links = await getUserLinks(userId);
+
+    return links.filter((link) => link.expireAt > now).length;
+};
+
+export const claimGuestLinks = async (
+    guestUserId: string,
+    userId: string
+) => {
+    const links = await getUserLinks(guestUserId);
+    const now = Math.floor(Date.now() / 1000);
+    const activeLinks = links.filter((link) => link.expireAt > now);
+
+    await Promise.all(
+        activeLinks.map((link) =>
+            ddb.send(
+                new UpdateCommand({
+                    TableName: config.urlTableName,
+                    Key: {
+                        code: link.code,
+                    },
+                    UpdateExpression: "SET userId = :userId",
+                    ConditionExpression: "userId = :guestUserId",
+                    ExpressionAttributeValues: {
+                        ":userId": userId,
+                        ":guestUserId": guestUserId,
+                    },
+                })
+            )
+        )
+    );
+
+    return activeLinks.length;
 };
 
 

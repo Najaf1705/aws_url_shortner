@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
 
-export default function GuestRoute({
+export default function ProtectedRoute({
     children,
 }: {
     children: React.ReactNode;
@@ -9,15 +9,12 @@ export default function GuestRoute({
     const isAuthenticated = useAppSelector(
         (state) => state.auth.isAuthenticated
     );
-    const isAuthLoading = useAppSelector(
-        (state: any) => state.auth.isLoading
-    );
+    const isAuthLoading = useAppSelector((state: any) => state.auth.isLoading);
 
-    // while auth status is loading, don't redirect — wait
     if (isAuthLoading) return null;
 
-    if (isAuthenticated) {
-        return <Navigate to="/" replace />;
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
     }
 
     return <>{children}</>;

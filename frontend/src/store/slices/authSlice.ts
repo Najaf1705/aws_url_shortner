@@ -12,14 +12,14 @@ export interface User {
 interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
-    isLoading: boolean;
+    isAuthLoading: boolean;
     error: string | null;
 }
 
 const initialState: AuthState = {
     user: null,
     isAuthenticated: false,
-    isLoading: false,
+    isAuthLoading: false,
     error: null,
 };
 
@@ -31,7 +31,7 @@ const authSlice = createSlice({
             state,
             action: PayloadAction<boolean>
         ) => {
-            state.isLoading =
+            state.isAuthLoading =
                 action.payload;
         },
 
@@ -66,7 +66,7 @@ const authSlice = createSlice({
         logout: (state) => {
             state.user = null;
             state.isAuthenticated = false;
-            state.isLoading = false;
+            state.isAuthLoading = false;
             state.error = null;
         },
     },
