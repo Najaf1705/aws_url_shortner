@@ -1,6 +1,8 @@
 export type CreateLinkBody = {
   longUrl: string;
-  expiresInSeconds?: number; // optional; default applied
+  // Expect absolute epoch seconds for expiry (required)
+  expiresAt?: number;
+  alias?: string;
   guestId?: string;
 };
 

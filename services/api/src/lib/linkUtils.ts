@@ -18,14 +18,50 @@ export const createLink = async (
     userId: string,
     longUrl: string,
     expireAt: number,
+    code?: string,
 ): Promise<UrlItem> => {
     const now = new Date().toISOString();
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        const code = randomBase62(config.codeLength);
-
+    // If a code (alias) is provided, attempt a single conditional put and
+    // fail fast if the alias already exists.
+    if (code) {
         const item: UrlItem = {
             code,
+            userId,
+            longUrl,
+            clickCount: 0,
+            createdAt: now,
+            expireAt,
+        };
+
+        try {
+            await ddb.send(
+                new PutCommand({
+                    TableName: config.urlTableName,
+                    Item: item,
+                    ConditionExpression: "attribute_not_exists(#code)",
+                    ExpressionAttributeNames: {
+                        "#code": "code",
+                    },
+                })
+            );
+
+            return item;
+        } catch (err: any) {
+            if (err?.name === "ConditionalCheckFailedException") {
+                throw new Error("ALIAS_TAKEN");
+            }
+
+            throw err;
+        }
+    }
+
+    // Otherwise try generating a unique code.
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        const generated = randomBase62(config.codeLength);
+
+        const item: UrlItem = {
+            code: generated,
             userId,
             longUrl,
             clickCount: 0,

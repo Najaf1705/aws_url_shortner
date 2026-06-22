@@ -5,16 +5,42 @@
 :root {
   --bg: #ffffff;
   --text: #111111;
+  --placeholder: rgba(17, 17, 17, 0.45);
+  --pattern-1: rgb(255, 0, 0);
+  --pattern-2: rgb(16, 185, 129);
 }
 
 .dark {
   --bg: #0a0a0a;
   --text: #f5f5f5;
+  --placeholder: rgba(245, 245, 245, 0.45);
+  --pattern-1: rgba(99,102,241);
+  --pattern-2: rgb(16, 185, 129);
 }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
+  /* dotted pattern applied as a repeating background layer so it is visible site-wide */
+  background-image:
+    radial-gradient(circle, var(--pattern-1) 2px, transparent 2px),
+    radial-gradient(circle, var(--pattern-2) 2px, transparent 2px);
+  background-size: 60px 60px, 60px 60px;
+  background-position: 0 0, 30px 30px;
+  background-repeat: repeat, repeat;
+  background-attachment: fixed;
+  
+}
+
+/* Smooth theme transitions: animate color-related properties when CSS variables change */
+* {
+  transition: background-color 240ms ease, color 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--placeholder);
+  transition: color 240ms ease;
 }
 
 
@@ -29,12 +55,40 @@ body {
 
 .dotted-bg {
   background-image:
-    radial-gradient(circle, red 1px, transparent 1px),
-    radial-gradient(circle, green 1px, transparent 1px);
+    radial-gradient(circle, rgba(99,102,241,0.18) 1px, transparent 1px),
+    radial-gradient(circle, rgba(16,185,129,0.12) 1px, transparent 1px);
   background-size: 48px 48px, 120px 120px;
   background-position: 0 0, 40px 60px;
-  /* animation: drift 60s linear infinite; */
+  background-repeat: repeat;
 }
+
+/* Make the pattern subtle and theme-aware when used as a global background */
+.dotted-bg,
+.bg-pattern {
+  opacity: 0.14;
+  mix-blend-mode: normal;
+}
+
+.dark .dotted-bg,
+.dark .bg-pattern {
+  opacity: 0.10;
+  mix-blend-mode: normal;
+}
+
+/* Prevent the global dotted pattern from bleeding into UI cards */
+.bg-bg {
+  /* ensure cards are opaque and use the theme background color */
+  background-image: none !important;
+  background-color: var(--bg) !important;
+}
+
+/* Inputs/buttons inside cards should also be solid so pattern doesn't show through */
+/* .bg-bg input,
+.bg-bg textarea,
+.bg-bg button {
+  background-image: none !important;
+  background-color: var(--bg) !important;
+} */
 
 .btn-3d {
   box-shadow: 5px 5px 0 0 #56b684;

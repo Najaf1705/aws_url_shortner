@@ -8,26 +8,28 @@ import type { CreateResponse } from "../pages/Home";
 type Props = {
     longUrl: string;
     setLongUrl: (v: string) => void;
-    expirySeconds: number;
-    setExpirySeconds: (v: number) => void;
-    useDefaultExpiry: boolean;
-    setUseDefaultExpiry: (v: boolean) => void;
     onCreated: (res: CreateResponse, genTime: string) => void;
 };
 
-export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpirySeconds, setUseDefaultExpiry, useDefaultExpiry, onCreated }: Props) {
+export default function UrlForm({ longUrl, setLongUrl, onCreated }: Props) {
     const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState<string[]>([]);
     const [errEntities, setErrEntities] = useState<string>("");
+    const [days, setDays] = useState<number>(1);
+    const [hours, setHours] = useState<number>(0);
+    const [minutes, setMinutes] = useState<number>(0);
+    const [alias, setAlias] = useState<string>("");
 
 
     function fillExample() {
         setErr([])
         setErrEntities("");
         setLongUrl("https://najaf.in");
-        setExpirySeconds(86400);
-        setUseDefaultExpiry(false);
+        setDays(1);
+        setHours(0);
+        setMinutes(0);
+        setAlias("");
     }
 
     const createShortUrl = async () => {
@@ -53,8 +55,19 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
             return;
         }
 
-        if (!useDefaultExpiry && expirySeconds < 60) {
-            setErr((e) => [...e, "Expiry must be > 60 secs"]);
+        // compute expiry from days/hours/minutes
+        const totalSeconds = (Number(days) * 24 * 60 * 60) + (Number(hours) * 60 * 60) + (Number(minutes) * 60);
+        const minSeconds = 60 * 2; // 2 minutes
+        const maxSeconds = 365 * 24 * 60 * 60;
+
+        if (totalSeconds < minSeconds) {
+            setErr((e) => [...e, "Expiry must be at least 2 minutes"]);
+            setErrEntities("EXPIRY_INPUT")
+            return;
+        }
+
+        if (totalSeconds > maxSeconds) {
+            setErr((e) => [...e, "Expiry cannot exceed 365 days"]);
             setErrEntities("EXPIRY_INPUT")
             return;
         }
@@ -63,7 +76,22 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
 
         try {
             const payload: any = { longUrl: trimmed };
-            if (!useDefaultExpiry) payload.expiresInSeconds = expirySeconds;
+
+            const expiresAt = Math.floor(Date.now() / 1000) + totalSeconds;
+            payload.expiresAt = expiresAt;
+
+            if (alias && alias.trim()) {
+                const a = alias.trim();
+                const ALIAS_PATTERN = /^[A-Za-z0-9_-]{5,30}$/;
+                if (!ALIAS_PATTERN.test(a)) {
+                    setErr((e) => [...e, "Alias invalid. Use 5-30 chars: letters, numbers, - or _"]);
+                    setErrEntities("ALIAS_INPUT");
+                    setLoading(false);
+                    return;
+                }
+
+                payload.alias = a;
+            }
 
             const { data } = await axios.post<CreateResponse>(
                 `${API_BASE}/link`,
@@ -81,6 +109,7 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
         } catch (e: any) {
             const message = e.response?.data?.message || e.response?.data || e.message || "Something went wrong";
             setErr((errState) => [...errState, message]);
+            if(message==="Alias already taken")setErrEntities("ALIAS_INPUT")
         } finally {
             setLoading(false);
         }
@@ -102,46 +131,70 @@ export default function UrlForm({ longUrl, setLongUrl, expirySeconds, setExpiryS
                 />
                 <div className="mt-1.5 font-mono text-text text-[13px]">Must include protocol (https:// or http://)</div>
 
-                <div className="grid grid-cols-[2.2fr_1fr] gap-4.5 mt-3.5 items-start max-sm:grid-cols-1">
+                <div className="grid grid-cols-[1fr_1fr] gap-4.5 mt-3.5 items-start max-sm:grid-cols-1">
                     <div>
-                        <div className="font-mono font-extrabold tracking-widest text-[13px] text-text mb-2">EXPIRY (SECONDS)</div>
-                        <input
-                    className={`w-full ${errEntities === "EXPIRY_INPUT" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] disabled:bg-gray-400 disabled:cursor-not-allowed`}
-                            type="number"
-                            value={expirySeconds}
-                            onChange={(e) => setExpirySeconds(Number(e.target.value))}
-                            disabled={useDefaultExpiry}
-                            min={60}
-                            step={60}
-                        />
-                        <div className="mt-1.5 font-mono text-text text-[13px]">Leave blank for API default (~24h)</div>
+                        <div className="font-mono font-extrabold tracking-widest text-[13px] text-text mb-2">EXPIRY</div>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <input
+                                    className={`w-full ${errEntities === "EXPIRY_INPUT" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] placeholder:text-[#9aa0a6]`}
+                                    type="number"
+                                    value={days}
+                                    onChange={(e) => {
+                                        const v = Math.max(0, Math.min(365, Math.floor(Number(e.target.value) || 0)));
+                                        setDays(v);
+                                    }}
+                                    min={0}
+                                    max={365}
+                                    placeholder="0"
+                                />
+                                <div className="font-mono text-[13px] mt-1">days</div>
+                            </div>
+                            <div>
+                                <input
+                                    className={`w-full ${errEntities === "EXPIRY_INPUT" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] placeholder:text-[#9aa0a6]`}
+                                    type="number"
+                                    value={hours}
+                                    onChange={(e) => {
+                                        const v = Math.max(0, Math.min(23, Math.floor(Number(e.target.value) || 0)));
+                                        setHours(v);
+                                    }}
+                                    min={0}
+                                    max={23}
+                                    placeholder="0"
+                                />
+                                <div className="font-mono text-[13px] mt-1">hours</div>
+                            </div>
+                            <div>
+                                <input
+                                    className={`w-full ${errEntities === "EXPIRY_INPUT" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91] placeholder:text-[#9aa0a6]`}
+                                    type="number"
+                                    value={minutes}
+                                    onChange={(e) => {
+                                        const v = Math.max(0, Math.min(59, Math.floor(Number(e.target.value) || 0)));
+                                        setMinutes(v);
+                                    }}
+                                    min={0}
+                                    max={59}
+                                    placeholder="0"
+                                />
+                                <div className="font-mono text-[13px] mt-1">mins</div>
+                            </div>
+                        </div>
+                        {/* <div className="mt-1.5 font-mono text-text text-[13px]">Example: 1 day → enter 1 in day</div> */}
                     </div>
 
                     <div>
-                        <div className="font-mono font-extrabold tracking-widest text-[13px] text-text mb-2">DEFAULT EXPIRY</div>
-                        <label className="inline-flex items-center gap-3 border-2 border-[#6b6b6b] px-3 py-2 bg-bg cursor-pointer">
-                            <span className="relative w-13.5 h-7 inline-block shrink-0">
-                                <input
-                                    type="checkbox"
-                                    className="opacity-0 w-0 h-0 absolute"
-                                    checked={useDefaultExpiry}
-                                    onChange={(e) => setUseDefaultExpiry(e.target.checked)}
-                                />
-                                <span
-                                    className="absolute inset-0 rounded-full transition-colors duration-150"
-                                    style={{ background: useDefaultExpiry ? "#7fa7ff" : "grey" }}
-                                >
-                                    <span
-                                        className="absolute top-1 left-1 w-5 h-5 rounded-full transition-transform duration-150"
-                                        style={{
-                                            background: useDefaultExpiry ? "#002564" : "white",
-                                            transform: useDefaultExpiry ? "translateX(26px)" : "translateX(0)",
-                                        }}
-                                    />
-                                </span>
-                            </span>
-                            <span className="font-mono text-[14px]">Use API default</span>
-                        </label>
+                        <div className="font-mono font-extrabold tracking-widest text-[13px] text-text mb-2">ALIAS (optional)</div>
+                        <input
+                            className={`w-full ${errEntities === "ALIAS_INPUT" ? "border-red-500" : "border-[#6b6b6b]"} border-2 px-3 py-2.5 font-mono outline-none focus:border-[#4cda91]`}
+                            type="text"
+                            value={alias}
+                            onChange={(e) => setAlias(e.target.value)}
+                            placeholder="custom-alias (5-30 chars)"
+                            maxLength={30}
+                        />
+                        <div className="mt-1.5 font-mono text-text text-[13px]">Allowed: letters, numbers, - and _</div>
                     </div>
                 </div>
             </div>

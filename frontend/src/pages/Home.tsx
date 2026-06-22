@@ -21,8 +21,7 @@ export default function App() {
     const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
 
     const [longUrl, setLongUrl] = useState("");
-    const [expirySeconds, setExpirySeconds] = useState(3600);
-    const [useDefaultExpiry, setUseDefaultExpiry] = useState(false);
+    // expiry is handled inside UrlForm now (days/hours/minutes)
     const [result, setResult] = useState<CreateResponse | null>(null);
     const [generationTime, setGenerationTime] = useState<string | null>(null);
     const [displayResult, setDisplayResult] = useState(false);
@@ -69,8 +68,7 @@ export default function App() {
     function clearAll() {
         setResult(null);
         setLongUrl("");
-        setExpirySeconds(3600);
-        setUseDefaultExpiry(false);
+        // expiry state lives in UrlForm now
         setCopiedKey(null);
         setDisplayResult(false);
     }
@@ -109,15 +107,11 @@ export default function App() {
 
 
                 {!displayResult ? (
-                    <UrlForm
-                        longUrl={longUrl}
-                        setLongUrl={setLongUrl}
-                        expirySeconds={expirySeconds}
-                        setExpirySeconds={setExpirySeconds}
-                        useDefaultExpiry={useDefaultExpiry}
-                        setUseDefaultExpiry={setUseDefaultExpiry}
-                        onCreated={onCreated}
-                    />
+                        <UrlForm
+                            longUrl={longUrl}
+                            setLongUrl={setLongUrl}
+                            onCreated={onCreated}
+                        />
                 ) : (
                     result && (
                         <ResultCard

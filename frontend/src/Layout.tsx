@@ -22,7 +22,12 @@ export default function Layout() {
       </div>
     </div >
 
-      <Outlet />
+      <div className="min-h-screen relative">
+        <div className="bg-pattern dotted-bg fixed inset-0 z-0 pointer-events-none" />
+        <div className="relative z-10">
+          <Outlet />
+        </div>
+      </div>
     </>
   );
 }

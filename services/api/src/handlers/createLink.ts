@@ -5,7 +5,6 @@ import { getOptionalAuthenticatedUser, getCookie } from "../lib/authUtils";
 import { countActiveUserLinks, createLink, toGuestUserId } from "../lib/linkUtils";
 import { randomBase62 } from "../lib/base62";
 
-const DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const MAX_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
 const MAX_GUEST_LINKS = 3;
 
@@ -62,19 +61,62 @@ export const handler = async (event: any) => {
       }
     }
 
-    const ttl = clamp(
-      body.expiresInSeconds ?? DEFAULT_TTL_SECONDS,
-      60, // minimum 1 minute
-      MAX_TTL_SECONDS
-    );
+    // Expect absolute epoch seconds for expiry. No default expiry; caller must provide.
+    if (!body?.expiresAt || typeof body.expiresAt !== "number") {
+      return response(
+        { message: "Expiry (expiresAt) is required" },
+        { statusCode: 400, origin }
+      );
+    }
 
-    const expireAt = Math.floor(Date.now() / 1000) + ttl;
+    const now = Math.floor(Date.now() / 1000);
+    const minExpiry = now + 60 * 2; // 2 minutes
+    const maxExpiry = now + MAX_TTL_SECONDS;
 
-    const link = await createLink(
-      userId,
-      body.longUrl,
-      expireAt,
-    );
+    if (body.expiresAt < minExpiry) {
+      return response(
+        { message: "Expiry must be at least 2 minutes from now" },
+        { statusCode: 400, origin }
+      );
+    }
+
+    if (body.expiresAt > maxExpiry) {
+      return response(
+        { message: "Expiry cannot exceed 365 days" },
+        { statusCode: 400, origin }
+      );
+    }
+
+    const expireAt = body.expiresAt;
+
+    // Optional alias support: validate and pass through to createLink.
+    const alias = typeof body.alias === "string" && body.alias.trim() ? body.alias.trim() : undefined;
+
+    if (alias) {
+      // alias length must be >4 and <31 (i.e. 5..30), allowed chars: alnum, underscore, dash
+      const ALIAS_PATTERN = /^[A-Za-z0-9_-]{5,30}$/;
+      if (!ALIAS_PATTERN.test(alias)) {
+        return response(
+          { message: "Alias invalid. Use 5-30 chars: letters, numbers, - or _" },
+          { statusCode: 400, origin }
+        );
+      }
+    }
+
+    let link;
+    try {
+      link = await createLink(
+        userId,
+        body.longUrl,
+        expireAt,
+        alias,
+      );
+    } catch (e: any) {
+      if (e.message === "ALIAS_TAKEN") {
+        return response({ message: "Alias already taken" }, { statusCode: 409, origin });
+      }
+      throw e;
+    }
 
     return response(
       {
