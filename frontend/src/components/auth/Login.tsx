@@ -3,6 +3,8 @@ import AuthLayout from "../AuthLayout";
 import { Link, useNavigate } from "react-router-dom";
 import { simpleLogin } from "../../utils/authUtils/login.utils";
 import { useAuthForm, useAutoFocus } from "./useAuthForm";
+import GoogleButton from "./GoogleButton";
+import { useAppSelector } from "../../store/hooks";
 
 export default function Login() {
     const navigate = useNavigate();
@@ -10,6 +12,7 @@ export default function Login() {
     const { err, errEntities, handleChange, setFieldError, setErr } = useAuthForm();
     const nameRef = useAutoFocus<HTMLInputElement>();
     const [sendingOtp, setSendingOtp] = useState<boolean>(false);
+    const isAuthLoading = useAppSelector((s) => s.auth.isAuthLoading);
 
     const validate = () => {
         if (!email.trim()) {
@@ -72,7 +75,7 @@ export default function Login() {
                     type="email"
                     value={email}
                     ref={nameRef}
-                    disabled={sendingOtp}
+                    disabled={sendingOtp || isAuthLoading}
                     onChange={handleChange(setEmail)}
                     required
                     placeholder="najaf@example.com"
@@ -81,28 +84,31 @@ export default function Login() {
 
             <div className="border-t-2 border-text" />
 
-            <div className="flex justify-between px-4 py-3 items-center">
+            <div className="flex justify-end px-4 py-3 items-center">
+                <div className="flex gap-4">
+                    <GoogleButton />
+
+                    <button
+                        onClick={usePassword}
+                        disabled={isAuthLoading}
+                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isAuthLoading ? "Signing in..." : "Password"}
+                    </button>
+                    <button
+                        onClick={useOtp}
+                        disabled={sendingOtp || isAuthLoading}
+                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">
+                        {sendingOtp ? "Sending OTP..." : isAuthLoading ? "Signing in..." : "OTP"}
+                    </button>
+                </div>
+            </div>
+            <div className="flex flex-col items-end gap-3 pb-4 px-4">
                 <Link
                     to="/signup"
                     className="text-sm text-[#4cda91]"
                 >
                     Don't have an account? Signup.
-                </Link>
-                <div className="flex gap-4">
-                    <button
-                        onClick={usePassword}
-                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black">
-                        Password
-                    </button>
-                    <button
-                        onClick={useOtp}
-                        disabled={sendingOtp}
-                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">
-                        {sendingOtp ? "Sending OTP..." : "OTP"}
-
-                    </button>
-                </div>
-            </div>
+                </Link>      </div>
         </AuthLayout>
     );
 }

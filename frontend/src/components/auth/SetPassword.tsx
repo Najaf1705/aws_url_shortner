@@ -2,6 +2,9 @@ import { useState } from "react";
 import AuthLayout from "../AuthLayout";
 import { useLocation, useNavigate } from "react-router-dom";
 import { simpleSignup } from "../../utils/authUtils/signup.utils";
+import axios from "axios";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { setUser, setAuthLoading } from "../../store/slices/authSlice";
 import { useAuthForm, useAutoFocus } from "./useAuthForm";
 
 export default function SetPassword() {
@@ -15,6 +18,8 @@ export default function SetPassword() {
   const [name] = useState(location.state?.name ?? "");
   const [loading, setLoading] = useState(false);
   const passwordRef = useAutoFocus<HTMLInputElement>();
+  const dispatch = useAppDispatch();
+  const isAuthLoading = useAppSelector((s) => s.auth.isAuthLoading);
 
   const validate = () => {
     if (!password.trim() && !confirmPassword.trim()) {
@@ -41,6 +46,30 @@ export default function SetPassword() {
     setLoading(true);
 
     try {
+      const idToken = location.state?.idToken as string | undefined;
+
+      if (idToken) {
+        const AUTH_BASE = import.meta.env.VITE_AUTH_BASE as string | undefined;
+        // send idToken + password to backend to complete google signup
+        dispatch(setAuthLoading(true));
+        try {
+          await axios.post(
+            `${AUTH_BASE}/google`,
+            { idToken, password },
+            { withCredentials: true }
+          );
+
+          // fetch user and update store
+          const { getCurrentUser } = await import("../../utils/authUtils/user.utils");
+          const user = await getCurrentUser();
+          dispatch(setUser(user));
+          navigate("/");
+          return;
+        } finally {
+          dispatch(setAuthLoading(false));
+        }
+      }
+
       const signupResponse = await simpleSignup(name, email, password);
       if (signupResponse.code === "EMAIL_VERIFICATION_REQUIRED") {
         navigate("/otp", {
@@ -71,7 +100,7 @@ export default function SetPassword() {
             value={password}
             ref={passwordRef}
 
-            disabled={loading}
+            disabled={loading || isAuthLoading}
             onChange={handleChange(setPassword)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !loading) {
@@ -89,7 +118,7 @@ export default function SetPassword() {
           <input
             type="password"
             value={confirmPassword}
-            disabled={loading}
+            disabled={loading || isAuthLoading}
             onChange={handleChange(setConfirmPassword)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !loading) {
@@ -107,9 +136,9 @@ export default function SetPassword() {
       <div className="flex justify-end px-4 py-3">
         <button
           onClick={handleSubmit}
-          disabled={loading}
+          disabled={loading || isAuthLoading}
           className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black  disabled:opacity-50 disabled:cursor-not-allowed" >
-          Save Password
+          {loading || isAuthLoading ? "Saving..." : "Save Password"}
         </button>
       </div>
       {/* errors shown by AuthLayout */}
