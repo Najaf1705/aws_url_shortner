@@ -19,9 +19,7 @@ export default function LinksTable() {
 
     const visibleLinks = links.filter((link) => link.expireAt > Math.floor(Date.now() / 1000));
 
-    useEffect(() => {
-        dispatch(fetchLinks());
-    }, [dispatch]);
+    // Links are populated globally on app bootstrap; no local fetch here.
 
     if (error) {
         return (
@@ -80,6 +78,9 @@ export default function LinksTable() {
                                             <button type="button" onClick={() => window.open(shortUrl, "_blank")} title="Visit short URL" className="min-w-20 flex-1 rounded border border-text bg-bg px-3 py-2 text-sm text-text hover:bg-[#787878] cursor-pointer sm:flex-none">
                                                 Visit
                                             </button>
+                                            <Link to={`/link/${l.code}`} replace title="View details" className="min-w-20 flex-1 rounded border border-[#2b2b2b] bg-[#f3f3f3] px-3 py-2 text-sm text-black hover:bg-[#e6e6e6] cursor-pointer sm:flex-none text-center">
+                                                Details
+                                            </Link>
                                         </div>
                                     </div>
                                 );

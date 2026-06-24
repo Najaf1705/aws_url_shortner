@@ -20,17 +20,17 @@ export const createLink = async (
     expireAt: number,
     code?: string,
 ): Promise<UrlItem> => {
-    const now = new Date().toISOString();
+    const now = Math.floor(Date.now() / 1000);
 
     // If a code (alias) is provided, attempt a single conditional put and
     // fail fast if the alias already exists.
     if (code) {
-        const item: UrlItem = {
+            const item: UrlItem = {
             code,
             userId,
             longUrl,
             clickCount: 0,
-            createdAt: now,
+                createdAt: now,
             expireAt,
         };
 

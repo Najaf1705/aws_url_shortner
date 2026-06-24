@@ -70,7 +70,7 @@ export default function Signup() {
 
       <div className="border-t-2 border-text" />
 
-      <div className="flex justify-end px-4 py-3 items-center gap-3">
+      <div className="flex justify-end px-4 py-3 flex-wrap items-center gap-3">
         <GoogleButton />
           <div className="flex gap-4">
           <button onClick={handleSignup} disabled={isAuthLoading} className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">{isAuthLoading ? "Working..." : "Continue"}</button>

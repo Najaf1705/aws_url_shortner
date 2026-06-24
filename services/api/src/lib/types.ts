@@ -11,6 +11,6 @@ export type UrlItem = {
   clickCount: number;
   userId: string,
   longUrl: string;
-  createdAt: string;
+  createdAt: number;
   expireAt: number; // epoch seconds (TTL attribute)
 };

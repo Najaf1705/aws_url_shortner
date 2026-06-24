@@ -84,22 +84,26 @@ export default function Login() {
 
             <div className="border-t-2 border-text" />
 
-            <div className="flex justify-end px-4 py-3 items-center">
-                <div className="flex gap-4">
-                    <GoogleButton />
+            <div className="flex justify-center px-4 py-3 items-center">
+                <div className="flex gap-4 flex-wrap">
+                    <div className="flex">
+                        <GoogleButton />
+                    </div>
 
-                    <button
-                        onClick={usePassword}
-                        disabled={isAuthLoading}
-                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">
-                        {isAuthLoading ? "Signing in..." : "Password"}
-                    </button>
-                    <button
-                        onClick={useOtp}
-                        disabled={sendingOtp || isAuthLoading}
-                        className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">
-                        {sendingOtp ? "Sending OTP..." : isAuthLoading ? "Signing in..." : "OTP"}
-                    </button>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={usePassword}
+                            disabled={isAuthLoading}
+                            className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">
+                            {isAuthLoading ? "Signing in..." : "Password"}
+                        </button>
+                        <button
+                            onClick={useOtp}
+                            disabled={sendingOtp || isAuthLoading}
+                            className="cursor-pointer btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] px-4 py-2 font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed">
+                            {sendingOtp ? "Sending OTP..." : isAuthLoading ? "Signing in..." : "OTP"}
+                        </button>
+                    </div>
                 </div>
             </div>
             <div className="flex flex-col items-end gap-3 pb-4 px-4">
@@ -108,7 +112,8 @@ export default function Login() {
                     className="text-sm text-[#4cda91]"
                 >
                     Don't have an account? Signup.
-                </Link>      </div>
+                </Link>
+            </div>
         </AuthLayout>
     );
 }

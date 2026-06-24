@@ -123,6 +123,34 @@ Resources:
         Minify: true
         Target: es2022
 
+
+  GetLinkFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: getLink.handler
+      Events:
+        GetLinkRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /link/{code}
+            Method: GET
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UrlTable
+      Environment:
+        Variables:
+          URL_TABLE_NAME: !Ref UrlTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/getLink.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
   ClaimGuestLinksFunction:
     Type: AWS::Serverless::Function
     Properties:

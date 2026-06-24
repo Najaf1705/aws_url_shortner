@@ -2,7 +2,7 @@ export interface LinkItem {
   code: string;
   longUrl: string;
   clickCount: number;
-  createdAt: string; // ISO string
+  createdAt: number; // epoch seconds
   expireAt: number; // epoch seconds
   userId?: string;
 }

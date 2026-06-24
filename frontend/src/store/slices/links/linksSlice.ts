@@ -26,6 +26,10 @@ const linksSlice = createSlice({
       state.error = null;
       state.isLoading = false;
     },
+    addLink: (state, action: PayloadAction<LinkItem>) => {
+      // Prepend new link so it appears at top of list
+      state.links = [action.payload, ...state.links];
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -48,5 +52,5 @@ const linksSlice = createSlice({
   },
 });
 
-export const { clearLinks } = linksSlice.actions;
+export const { clearLinks, addLink } = linksSlice.actions;
 export default linksSlice.reducer;

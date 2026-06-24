@@ -11,12 +11,14 @@ import SetPassword from "./components/auth/SetPassword";
 import { useEffect } from "react";
 import { getCurrentUser } from "./utils/authUtils/user.utils";
 import { useAppDispatch } from "./store/hooks";
+import { fetchLinks } from "./store/slices/links/linksThunks";
 import { logout, setUser, setAuthLoading } from "./store/slices/authSlice";
 import GuestRoute from "./routes/GuestRoute";
 import PasswordRoute from "./routes/PasswordRoute";
 import OtpRoute from "./routes/OtpRoute";
 import SetPasswordRoute from "./routes/SetPasswordRoute";
 import LinksTable from "./components/LinksTable";
+import LinkDetail from "./pages/LinkDetail";
 import { claimGuestLinks } from "./utils/guestLinks";
 import Profile from "./components/Profile";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -38,6 +40,12 @@ export default function App() {
         dispatch(logout());
       } finally {
         dispatch(setAuthLoading(false));
+        // Load user links into redux on initial render
+        try {
+          dispatch(fetchLinks());
+        } catch (e) {
+          console.error("Failed to dispatch fetchLinks", e);
+        }
       }
     };
 
@@ -74,6 +82,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/links" element={<LinksTable />} />
+        <Route path="/link/:code" element={<LinkDetail />} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
         <Route

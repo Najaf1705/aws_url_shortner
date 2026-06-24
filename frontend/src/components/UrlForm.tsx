@@ -1,6 +1,8 @@
 
 import axios from "axios";
 import { useState } from "react";
+import { useAppDispatch } from "../store/hooks";
+import { addLink } from "../store/slices/links/linksSlice";
 import { nowHHMMSS } from "../utils/nowHHMMSS";
 import type { CreateResponse } from "../pages/Home";
 // guest id is now managed by backend cookie
@@ -13,6 +15,7 @@ type Props = {
 
 export default function UrlForm({ longUrl, setLongUrl, onCreated }: Props) {
     const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
+    const dispatch = useAppDispatch();
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState<string[]>([]);
     const [errEntities, setErrEntities] = useState<string>("");
@@ -105,6 +108,23 @@ export default function UrlForm({ longUrl, setLongUrl, onCreated }: Props) {
             );
 
             const genTime = nowHHMMSS();
+
+            // Add new link to redux store to avoid refetching
+            try {
+                const newLink = {
+                    code: data.code,
+                    longUrl: trimmed,
+                    clickCount: 0,
+                    createdAt: Math.floor(Date.now() / 1000),
+                    expireAt: data.expireAt,
+                };
+
+                dispatch(addLink(newLink));
+            } catch (err) {
+                // ignore store update errors
+                console.error("Failed to add link to store", err);
+            }
+
             onCreated(data, genTime);
         } catch (e: any) {
             const message = e.response?.data?.message || e.response?.data || e.message || "Something went wrong";

@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import ThemeToggle from "./components/ThemeToggle";
 import UserStatus from "./components/auth/UserStatus";
 import LinksButton from "./components/LinksButton";
+import Footer from "./components/Footer";
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ export default function Layout() {
           <Outlet />
         </div>
       </div>
+      <Footer />
     </>
   );
 }

@@ -129,10 +129,11 @@ export const handler = async (event: any) => {
   } catch (e: any) {
     if (
       e.message === "Invalid URL" ||
-      e.message === "URL must start with http:// or https://"
+      e.message === "URL must start with http:// or https://" ||
+      e.message === "Banned domain URL"
     ) {
       return response(
-        { message: "Invalid URL" },
+        { message: e.message },
         { statusCode: 401, origin }
       );
     }
