@@ -1,10 +1,7 @@
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { fetchLinks } from "../store/slices/links/linksThunks";
+import { useAppSelector } from "../store/hooks";
 import { Link } from "react-router-dom";
 
 export default function LinksTable() {
-    const dispatch = useAppDispatch();
     const SHORT_BASE = (import.meta.env.VITE_SHORT_BASE as string) || "https://short.najaf.in";
     const { links, isLoading: linksIsLoading, error } = useAppSelector((state) => state.links);
 
