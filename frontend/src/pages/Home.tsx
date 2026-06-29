@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import Header from "../components/Header";
 import UrlForm from "../components/UrlForm";
 import ResultCard from "../components/ResultCard";
+// import { QuotaDisplay } from "../components/QuotaDisplay";
 
 // URL creation moved into UrlForm component
 
@@ -105,6 +106,10 @@ export default function App() {
                 />
                 <div className="border-t-2 border-text" />
 
+
+                {/* <div className="px-4 pt-4">
+                    <QuotaDisplay />
+                </div> */}
 
                 {!displayResult ? (
                         <UrlForm

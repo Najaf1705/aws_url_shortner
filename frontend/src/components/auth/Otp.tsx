@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent } from "react";
 import AuthLayout from "../AuthLayout";
-import { simpleSignup } from "../../utils/authUtils/signup.utils";
-import { getCurrentUser } from "../../utils/authUtils/user.utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../../store/hooks";
-import { setUser } from "../../store/slices/authSlice";
 import { useAuthForm } from "./useAuthForm";
-import { simpleLogin } from "../../utils/authUtils/login.utils";
-import { claimGuestLinks } from "../../utils/guestLinks";
+import { claimGuestLinks } from "../../store/slices/links/linksThunks";
+import { loginUser, signupUser } from "../../store/slices/auth/authThunks";
 
 type OtpMode = "signup" | "login" | "reset" | "verify";
 
@@ -109,20 +106,20 @@ export default function Otp(props: OtpProps = {}) {
       if (onVerify) {
         await onVerify(otp, ctx);
       } else if (mode === "signup") {
-        await simpleSignup(name, email, password, otp, otpId);
-        const user = await getCurrentUser();
-        dispatch(setUser(user));
-        await claimGuestLinks().catch((error) => {
+        await dispatch(signupUser({ name, email, password, otp, otpId })).unwrap();
+        try {
+          await dispatch(claimGuestLinks()).unwrap();
+        } catch (error) {
           console.error("Failed to claim guest links", error);
-        });
+        }
         navigate("/", { replace: true });
       } else if (mode === "login") {
-        await simpleLogin(email, loginMode, password, otpId, otp);
-        const user = await getCurrentUser();
-        dispatch(setUser(user));
-        await claimGuestLinks().catch((error) => {
+        await dispatch(loginUser({ email, loginMode, password, otpId, otp })).unwrap();
+        try {
+          await dispatch(claimGuestLinks()).unwrap();
+        } catch (error) {
           console.error("Failed to claim guest links", error);
-        });
+        }
         navigate("/", { replace: true });
       } else {
         throw new Error("No verification handler provided for this mode");

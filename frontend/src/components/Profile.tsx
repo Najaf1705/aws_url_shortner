@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
-import { logout as logoutApi } from "../utils/authUtils/logout.utils";
-import { logout as logoutAction } from "../store/slices/authSlice";
+import { logout as logoutAction } from "../store/slices/auth/authSlice";
+import { logoutUser } from "../store/slices/auth/authThunks";
+import { clearLinks } from "../store/slices/links/linksSlice";
 
 export default function Profile() {
     const dispatch = useAppDispatch();
@@ -15,8 +16,9 @@ export default function Profile() {
         setErr(null);
         setLoading(true);
         try {
-            await logoutApi();
+            await dispatch(logoutUser()).unwrap();
             dispatch(logoutAction());
+            dispatch(clearLinks());
         } catch (e: any) {
             setErr(e?.message || "Logout failed");
         } finally {

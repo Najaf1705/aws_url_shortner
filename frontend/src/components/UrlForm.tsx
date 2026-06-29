@@ -1,9 +1,9 @@
 
-import axios from "axios";
 import { useState } from "react";
-import { useAppDispatch } from "../store/hooks";
-import { addLink } from "../store/slices/links/linksSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { createLink } from "../store/slices/links/linksThunks";
 import { nowHHMMSS } from "../utils/nowHHMMSS";
+import { PaymentModal } from "./PaymentModal";
 import type { CreateResponse } from "../pages/Home";
 // guest id is now managed by backend cookie
 
@@ -16,6 +16,7 @@ type Props = {
 export default function UrlForm({ longUrl, setLongUrl, onCreated }: Props) {
     const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
     const dispatch = useAppDispatch();
+    const quota = useAppSelector((state) => state.links.quota);
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState<string[]>([]);
     const [errEntities, setErrEntities] = useState<string>("");
@@ -23,6 +24,9 @@ export default function UrlForm({ longUrl, setLongUrl, onCreated }: Props) {
     const [hours, setHours] = useState<number>(0);
     const [minutes, setMinutes] = useState<number>(0);
     const [alias, setAlias] = useState<string>("");
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [pendingCreatePayload, setPendingCreatePayload] = useState<any>(null);
+    const [pendingPaymentId, setPendingPaymentId] = useState<string | undefined>(undefined);
 
 
     function fillExample() {
@@ -96,44 +100,65 @@ export default function UrlForm({ longUrl, setLongUrl, onCreated }: Props) {
                 payload.alias = a;
             }
 
-            const { data } = await axios.post<CreateResponse>(
-                `${API_BASE}/link`,
-                payload,
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    withCredentials: true,
-                }
-            );
+            const action = await dispatch(createLink(payload)).unwrap();
+            console.log("payment action: ", action);
 
-            const genTime = nowHHMMSS();
-
-            // Add new link to redux store to avoid refetching
-            try {
-                const newLink = {
-                    code: data.code,
-                    longUrl: trimmed,
-                    clickCount: 0,
-                    createdAt: Math.floor(Date.now() / 1000),
-                    expireAt: data.expireAt,
-                };
-
-                dispatch(addLink(newLink));
-            } catch (err) {
-                // ignore store update errors
-                console.error("Failed to add link to store", err);
+            if ((action as any).paymentRequired) {
+                setPendingCreatePayload(payload);
+                setPendingPaymentId((action as any).paymentId);
+                setShowPaymentModal(true);
+                setLoading(false);
+                return;
             }
 
-            onCreated(data, genTime);
+            if (!("link" in action)) {
+                throw new Error("Unexpected create link response");
+            }
+
+            const createdLink = action.link;
+            const genTime = nowHHMMSS();
+            onCreated({ code: createdLink.code, expireAt: createdLink.expireAt }, genTime);
         } catch (e: any) {
             const message = e.response?.data?.message || e.response?.data || e.message || "Something went wrong";
             setErr((errState) => [...errState, message]);
-            if(message==="Alias already taken")setErrEntities("ALIAS_INPUT")
         } finally {
             setLoading(false);
         }
     }
+
+    const handlePaymentConfirm = async (paymentId?: string) => {
+        setShowPaymentModal(false);
+        if (!pendingCreatePayload) {
+            setErr((e) => [...e, "No pending link creation to retry"]);
+            return;
+        }
+
+        const retryPayload = {
+            ...pendingCreatePayload,
+            paymentId: paymentId ?? pendingPaymentId,
+        };
+
+        setErr((e) => [...e, "Payment successful. Retrying link creation..."]);
+        try {
+            const action = await dispatch(createLink(retryPayload)).unwrap();
+            if ((action as any).paymentRequired) {
+                setErr((e) => [...e, "Payment is still required to create this link"]);
+                return;
+            }
+
+            const createdLink = (action as any).link;
+            const genTime = nowHHMMSS();
+            onCreated({ code: createdLink.code, expireAt: createdLink.expireAt }, genTime);
+            setPendingCreatePayload(null);
+            setPendingPaymentId(undefined);
+        } catch (e: any) {
+            const message = e.response?.data?.message || e.response?.data || e.message || "Something went wrong";
+            setErr((errState) => [...errState, message]);
+        }
+    };
+
+    const isQuotaExhausted = quota && quota.freeLinksRemaining === 0;
+
     return (
         <>
             <div className="px-4 py-3.5 ">
@@ -235,6 +260,7 @@ export default function UrlForm({ longUrl, setLongUrl, onCreated }: Props) {
                     className="btn-3d border-2 border-[#2b2b2b] bg-[#4cda91] text-black px-4.5 py-2.5 font-bold text-[15px] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     onClick={createShortUrl}
                     disabled={loading}
+                    title={isQuotaExhausted ? "Free quota is exhausted; payment will be requested when needed." : ""}
                 >
                     {loading ? "Creating..." : "Create Short URL"}
                 </button>
@@ -244,6 +270,14 @@ export default function UrlForm({ longUrl, setLongUrl, onCreated }: Props) {
                     {err.map((e, i) => <div key={i}>{e}</div>)}
                 </div>
             )}
+
+            <PaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+                quota={quota || undefined}
+                paymentId={pendingPaymentId}
+                onConfirm={handlePaymentConfirm}
+            />
         </>
     )
 }

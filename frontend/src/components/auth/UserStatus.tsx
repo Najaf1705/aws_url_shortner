@@ -1,8 +1,9 @@
 import { LogIn, LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { clearUser } from "../../store/slices/authSlice";
-import { logout } from "../../utils/authUtils/logout.utils";
+import { clearUser } from "../../store/slices/auth/authSlice";
+import { logoutUser } from "../../store/slices/auth/authThunks";
+import { clearLinks } from "../../store/slices/links/linksSlice";
 
 export default function UserStatus() {
   const navigate = useNavigate();
@@ -11,13 +12,17 @@ export default function UserStatus() {
   const user = useAppSelector((state) => state.auth.user);
 
   const handleLogout = async () => {
-    await logout();
-    dispatch(clearUser());
-
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-
-    navigate("/login");
+    try {
+      await dispatch(logoutUser()).unwrap();
+    } catch (error) {
+      console.error("Logout failed", error);
+    } finally {
+      dispatch(clearUser());
+      dispatch(clearLinks());
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      navigate("/login");
+    }
   };
 
   if (!user) {

@@ -4,6 +4,7 @@ import type { CreateLinkBody } from "../lib/types";
 import { getOptionalAuthenticatedUser, getCookie } from "../lib/authUtils";
 import { countActiveUserLinks, createLink, toGuestUserId } from "../lib/linkUtils";
 import { randomBase62 } from "../lib/base62";
+import { canCreateFreeLink, incrementFreeLinksUsed, createPayment, getPayment, PRICING } from "../lib/premium";
 
 const MAX_TTL_SECONDS = 60 * 60 * 24 * 365; // 1 year
 const MAX_GUEST_LINKS = 3;
@@ -50,6 +51,21 @@ export const handler = async (event: any) => {
 
     const userId = payload?.sub ?? toGuestUserId((guestId ?? "").toString());
 
+    // Extract and validate alias early (needed for premium check)
+    const alias = typeof body.alias === "string" && body.alias.trim() ? body.alias.trim() : undefined;
+    const paymentId = typeof body.paymentId === "string" && body.paymentId.trim() ? body.paymentId.trim() : undefined;
+
+    if (alias) {
+      // alias length must be >4 and <31 (i.e. 5..30), allowed chars: alnum, underscore, dash
+      const ALIAS_PATTERN = /^[A-Za-z0-9_-]{5,30}$/;
+      if (!ALIAS_PATTERN.test(alias)) {
+        return response(
+          { message: "Alias invalid. Use 5-30 chars: letters, numbers, - or _" },
+          { statusCode: 400, origin }
+        );
+      }
+    }
+
     if (!payload) {
       const guestLinkCount = await countActiveUserLinks(userId);
 
@@ -58,6 +74,50 @@ export const handler = async (event: any) => {
           { message: "Login to create more than 3 links" },
           { statusCode: 403, origin }
         );
+      }
+    } else {
+      // For authenticated users, check premium quota
+      const canCreateFree = await canCreateFreeLink(userId);
+      if (!canCreateFree) {
+        if (paymentId) {
+          const existingPayment = await getPayment(paymentId);
+          if (existingPayment?.userId === userId && existingPayment.status === "completed") {
+            // Payment has already been completed, allow the link to be created.
+          } else {
+            const paymentRequired = await createPayment(
+              userId,
+              PRICING.EXTRA_LINK_COST,
+              alias ? 'alias-creation' : 'extra-link'
+            );
+            return response(
+              {
+                message: "Free link quota exhausted. Payment required.",
+                paymentRequired: true,
+                cost: PRICING.EXTRA_LINK_COST,
+                paymentId: paymentRequired.paymentId,
+                purpose: alias ? 'alias-creation' : 'extra-link',
+              },
+              { statusCode: 402, origin }
+            );
+          }
+        } else {
+          // User has reached free tier limit
+          const paymentRequired = await createPayment(
+            userId,
+            PRICING.EXTRA_LINK_COST,
+            alias ? 'alias-creation' : 'extra-link'
+          );
+          return response(
+            {
+              message: "Free link quota exhausted. Payment required.",
+              paymentRequired: true,
+              cost: PRICING.EXTRA_LINK_COST,
+              paymentId: paymentRequired.paymentId,
+              purpose: alias ? 'alias-creation' : 'extra-link',
+            },
+            { statusCode: 402, origin }
+          );
+        }
       }
     }
 
@@ -89,20 +149,6 @@ export const handler = async (event: any) => {
 
     const expireAt = body.expiresAt;
 
-    // Optional alias support: validate and pass through to createLink.
-    const alias = typeof body.alias === "string" && body.alias.trim() ? body.alias.trim() : undefined;
-
-    if (alias) {
-      // alias length must be >4 and <31 (i.e. 5..30), allowed chars: alnum, underscore, dash
-      const ALIAS_PATTERN = /^[A-Za-z0-9_-]{5,30}$/;
-      if (!ALIAS_PATTERN.test(alias)) {
-        return response(
-          { message: "Alias invalid. Use 5-30 chars: letters, numbers, - or _" },
-          { statusCode: 400, origin }
-        );
-      }
-    }
-
     let link;
     try {
       link = await createLink(
@@ -111,6 +157,11 @@ export const handler = async (event: any) => {
         expireAt,
         alias,
       );
+      
+      // Increment free links counter for authenticated users
+      if (payload) {
+        await incrementFreeLinksUsed(userId);
+      }
     } catch (e: any) {
       if (e.message === "ALIAS_TAKEN") {
         return response({ message: "Alias already taken" }, { statusCode: 409, origin });

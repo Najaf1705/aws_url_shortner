@@ -1,12 +1,10 @@
 import { useState } from "react";
 import AuthLayout from "../AuthLayout";
-import { simpleLogin } from "../../utils/authUtils/login.utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../../store/hooks";
-import { getCurrentUser } from "../../utils/authUtils/user.utils";
-import { setUser } from "../../store/slices/authSlice";
 import { useAuthForm, useAutoFocus } from "./useAuthForm";
-import { claimGuestLinks } from "../../utils/guestLinks";
+import { claimGuestLinks } from "../../store/slices/links/linksThunks";
+import { loginUser } from "../../store/slices/auth/authThunks";
 
 export default function Password() {
     const location = useLocation();
@@ -36,14 +34,12 @@ export default function Password() {
         setLoading(true);
 
         try {
-            await simpleLogin(email, "PASSWORD", password);
-
-            const user = await getCurrentUser();
-
-            dispatch(setUser(user));
-            await claimGuestLinks().catch((error) => {
-                console.error("Failed to claim guest links", error);
-            });
+            await dispatch(loginUser({ email, loginMode: "PASSWORD", password })).unwrap();
+        try {
+            await dispatch(claimGuestLinks()).unwrap();
+        } catch (error) {
+            console.error("Failed to claim guest links", error);
+        }
 
             navigate("/", {
                 replace: true,

@@ -14,6 +14,8 @@ Globals:
         LOG_LEVEL: info
         CODE_LENGTH: 7
         JWT_SECRET: replace-with-something-long
+        # RAZORPAY_KEY_ID: !Ref RazorpayKeyId
+        # RAZORPAY_KEY_SECRET: !Ref RazorpayKeySecret
 
 Resources:
   HttpApi:
@@ -26,7 +28,13 @@ Resources:
           - http://localhost:5173
           - https://shorty.najaf.in
         AllowMethods:
-          - "*"
+          - GET
+          - POST
+          - PUT
+          - OPTIONS
+          - PATCH
+          - DELETE
+          - HEAD
         AllowHeaders:
           - Content-Type
           - Authorization
@@ -58,7 +66,42 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: url-shortener-users
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
 
+  PaymentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: url-shortener-payments
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: paymentId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: N
+      KeySchema:
+        - AttributeName: paymentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
   ClickEventsQueue:
     Type: AWS::SQS::Queue
@@ -82,9 +125,15 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UrlTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
       Environment:
         Variables:
           URL_TABLE_NAME: !Ref UrlTable
+          USERS_TABLE_NAME: !Ref UsersTable
+          PAYMENTS_TABLE_NAME: !Ref PaymentsTable
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -111,9 +160,12 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UrlTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
       Environment:
         Variables:
           URL_TABLE_NAME: !Ref UrlTable
+          USERS_TABLE_NAME: !Ref UsersTable
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -151,6 +203,39 @@ Resources:
         Minify: true
         Target: es2022
 
+  DeleteLinkFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: deleteLink.handler
+      Events:
+        DeleteLinkRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /link/{code}
+            Method: DELETE
+        DeleteLinkOptionsRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /link/{code}
+            Method: OPTIONS
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UrlTable
+      Environment:
+        Variables:
+          URL_TABLE_NAME: !Ref UrlTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/deleteLink.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
   ClaimGuestLinksFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -178,6 +263,131 @@ Resources:
         Minify: true
         Target: es2022
 
+  InitiatePaymentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: initiatePayment.handler
+      Events:
+        InitiatePaymentRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /payment/initiate
+            Method: POST
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+      Environment:
+        Variables:
+          PAYMENTS_TABLE_NAME: !Ref PaymentsTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/initiatePayment.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
+  CreateOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: createOrder.handler
+      Events:
+        CreateOrderRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /payment/create-order
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/createOrder.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
+
+  WebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: paymentWebhook.handler
+      Events:
+        WebhookRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /payment/webhook
+            Method: POST
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref PaymentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/paymentWebhook.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
+  VerifyPaymentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: verifyPayment.handler
+      Events:
+        VerifyPaymentRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /payment/verify
+            Method: POST
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/verifyPayment.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
+
+  ExtendLinkFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../services/api
+      Handler: extendLink.handler
+      Events:
+        ExtendLinkRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /link/{code}/extend
+            Method: POST
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UrlTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+      Environment:
+        Variables:
+          URL_TABLE_NAME: !Ref UrlTable
+          PAYMENTS_TABLE_NAME: !Ref PaymentsTable
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/handlers/extendLink.ts
+        Bundle: true
+        Minify: true
+        Target: es2022
 
   RedirectFunction:
     Type: AWS::Serverless::Function

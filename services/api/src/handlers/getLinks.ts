@@ -2,6 +2,7 @@ import { config } from "../lib/config";
 import { getOptionalAuthenticatedUser, getCookie } from "../lib/authUtils";
 import { response } from "../lib/response";
 import { getUserLinks, toGuestUserId } from "../lib/linkUtils";
+import { getUserProfile, PRICING } from "../lib/premium";
 
 export const handler = async (event: any) => {
     const headers = event.headers ?? {};
@@ -24,10 +25,24 @@ export const handler = async (event: any) => {
 
         console.log("user dets: ", links)
 
+        // Include quota info for authenticated users
+        let quotaInfo = null;
+        if (payload) {
+          const userProfile = await getUserProfile(payload.sub);
+          quotaInfo = {
+            freeLinksUsed: userProfile.freeLinksUsed,
+            freeLinksLimit: PRICING.FREE_LINK_QUOTA,
+            freeLinksRemaining: Math.max(0, PRICING.FREE_LINK_QUOTA - userProfile.freeLinksUsed),
+            extraLinkCost: PRICING.EXTRA_LINK_COST,
+            extensionCost: PRICING.EXTEND_30_DAYS_COST,
+          };
+        }
+
         return response(
             {
                 message: "User Links",
                 links,
+                quota: quotaInfo,
             },
             { statusCode: 200, origin }
         );

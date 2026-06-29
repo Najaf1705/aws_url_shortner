@@ -1,5 +1,7 @@
 export const config = {
   urlTableName: mustGet("URL_TABLE_NAME"),
+  usersTableName: mustGet("USERS_TABLE_NAME"),
+  paymentsTableName: mustGet("PAYMENTS_TABLE_NAME"),
   clickQueueUrl: process.env.CLICK_QUEUE_URL,
   codeLength: parseInt(process.env.CODE_LENGTH ?? "7", 10),
   logLevel: process.env.LOG_LEVEL ?? "info",

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import AuthLayout from "../AuthLayout";
 import { useLocation, useNavigate } from "react-router-dom";
-import { simpleSignup } from "../../utils/authUtils/signup.utils";
-import axios from "axios";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { setUser, setAuthLoading } from "../../store/slices/authSlice";
+import { setAuthLoading } from "../../store/slices/auth/authSlice";
 import { useAuthForm, useAutoFocus } from "./useAuthForm";
+import { authenticateWithGoogle, signupUser, fetchCurrentUser } from "../../store/slices/auth/authThunks";
+import { claimGuestLinks } from "../../store/slices/links/linksThunks";
 
 export default function SetPassword() {
   const location = useLocation();
@@ -49,20 +49,21 @@ export default function SetPassword() {
       const idToken = location.state?.idToken as string | undefined;
 
       if (idToken) {
-        const AUTH_BASE = import.meta.env.VITE_AUTH_BASE as string | undefined;
         // send idToken + password to backend to complete google signup
         dispatch(setAuthLoading(true));
         try {
-          await axios.post(
-            `${AUTH_BASE}/google`,
-            { idToken, password },
-            { withCredentials: true }
-          );
+          const result = await dispatch(authenticateWithGoogle({ idToken, password })).unwrap();
+          if (result.requiresPassword) {
+            navigate("/set-password", { state: { email: result.email, idToken } });
+            return;
+          }
 
-          // fetch user and update store
-          const { getCurrentUser } = await import("../../utils/authUtils/user.utils");
-          const user = await getCurrentUser();
-          dispatch(setUser(user));
+          await dispatch(fetchCurrentUser()).unwrap();
+          try {
+            await dispatch(claimGuestLinks()).unwrap();
+          } catch (error) {
+            console.error("Failed to claim guest links", error);
+          }
           navigate("/");
           return;
         } finally {
@@ -70,13 +71,20 @@ export default function SetPassword() {
         }
       }
 
-      const signupResponse = await simpleSignup(name, email, password);
-      if (signupResponse.code === "EMAIL_VERIFICATION_REQUIRED") {
+      const signupResponse = await dispatch(signupUser({ name, email, password })).unwrap();
+      if (signupResponse.requiresOtp) {
         navigate("/otp", {
           state: { email, name, password, otpId: signupResponse.otpId },
         });
         return;
       }
+
+      try {
+        await dispatch(claimGuestLinks()).unwrap();
+      } catch (error) {
+        console.error("Failed to claim guest links", error);
+      }
+      navigate("/");
     } finally {
       setLoading(false);
     }

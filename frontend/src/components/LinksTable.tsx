@@ -1,5 +1,6 @@
 import { useAppSelector } from "../store/hooks";
 import { Link } from "react-router-dom";
+import { QuotaDisplay } from "./QuotaDisplay";
 
 export default function LinksTable() {
     const SHORT_BASE = (import.meta.env.VITE_SHORT_BASE as string) || "https://short.najaf.in";
@@ -33,6 +34,10 @@ export default function LinksTable() {
             <div className="w-full max-w-245 rounded-md bg-bg border-2 border-text shadow-[0_18px_90px_rgba(0,203,210,.25)]">
                 <h1 className="px-3 py-3 text-xl font-semibold sm:px-4 sm:py-4 sm:text-2xl">Your Shorties</h1>
                 <div className="border-t-2 border-text" />
+
+                <div className="px-3 py-3 sm:px-4 sm:py-4">
+                    <QuotaDisplay />
+                </div>
 
                 <div className="px-2 py-2.5 sm:px-4 sm:py-3.5">
                     <style>{`
@@ -75,7 +80,7 @@ export default function LinksTable() {
                                             <button type="button" onClick={() => window.open(shortUrl, "_blank")} title="Visit short URL" className="min-w-20 flex-1 rounded border border-text bg-bg px-3 py-2 text-sm text-text hover:bg-[#787878] cursor-pointer sm:flex-none">
                                                 Visit
                                             </button>
-                                            <Link to={`/link/${l.code}`} replace title="View details" className="min-w-20 flex-1 rounded border border-[#2b2b2b] bg-[#f3f3f3] px-3 py-2 text-sm text-black hover:bg-[#e6e6e6] cursor-pointer sm:flex-none text-center">
+                                            <Link to={`/link/${l.code}`} title="View details" className="min-w-20 flex-1 rounded border border-[#2b2b2b] bg-[#f3f3f3] px-3 py-2 text-sm text-black hover:bg-[#e6e6e6] cursor-pointer sm:flex-none text-center">
                                                 Details
                                             </Link>
                                         </div>

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../../store/hooks";
-import { setUser, setAuthLoading } from "../../store/slices/authSlice";
-import { getCurrentUser } from "../../utils/authUtils/user.utils";
+import { setAuthLoading } from "../../store/slices/auth/authSlice";
+import { authenticateWithGoogle, fetchCurrentUser } from "../../store/slices/auth/authThunks";
+import { claimGuestLinks } from "../../store/slices/links/linksThunks";
 
 export default function GoogleButton() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -20,9 +20,8 @@ export default function GoogleButton() {
     (async function checkCurrent() {
       dispatch(setAuthLoading(true));
       try {
-        const user = await getCurrentUser();
+        const user = await dispatch(fetchCurrentUser()).unwrap();
         if (user && !cancelled) {
-          dispatch(setUser(user));
           navigate("/");
           return;
         }
@@ -62,24 +61,20 @@ export default function GoogleButton() {
 
           dispatch(setAuthLoading(true));
           try {
-            const AUTH_BASE = import.meta.env.VITE_AUTH_BASE as string | undefined;
-            const res = await axios.post(
-              `${AUTH_BASE}/google`,
-              { idToken },
-              { withCredentials: true }
-            );
+            const result = await dispatch(authenticateWithGoogle({ idToken })).unwrap();
 
-            // If backend indicates incomplete signup, redirect to set-password
-            if (res?.data?.status === "INCOMPLETE_SIGNUP") {
-              const email = res.data.email ?? resp?.email ?? "";
+            if (result.requiresPassword) {
+              const email = result.email ?? resp?.email ?? "";
               navigate("/set-password", { state: { email, idToken } });
-              dispatch(setAuthLoading(false));
               return;
             }
 
-            // otherwise assume success and fetch current user
-            const user = await getCurrentUser();
-            dispatch(setUser(user));
+            await dispatch(fetchCurrentUser()).unwrap();
+            try {
+              await dispatch(claimGuestLinks()).unwrap();
+            } catch (error) {
+              console.error("Failed to claim guest links", error);
+            }
             navigate("/");
           } catch (err) {
             // eslint-disable-next-line no-console

@@ -21,8 +21,7 @@ function buildHeaders(
     "Access-Control-Allow-Origin": corsOrigin,
     // "Access-Control-Allow-Headers":
     //   "Content-Type,Authorization",
-    // "Access-Control-Allow-Methods":
-    //   "GET,POST,PUT,DELETE,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
     "Access-Control-Allow-Credentials": "true",
 
     ...headers,

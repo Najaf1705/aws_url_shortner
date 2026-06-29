@@ -1,13 +1,14 @@
 import { useState } from "react";
 import AuthLayout from "../AuthLayout";
 import { Link, useNavigate } from "react-router-dom";
-import { simpleLogin } from "../../utils/authUtils/login.utils";
 import { useAuthForm, useAutoFocus } from "./useAuthForm";
 import GoogleButton from "./GoogleButton";
-import { useAppSelector } from "../../store/hooks";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { loginUser } from "../../store/slices/auth/authThunks";
 
 export default function Login() {
     const navigate = useNavigate();
+    const dispatch = useAppDispatch();
     const [email, setEmail] = useState("");
     const { err, errEntities, handleChange, setFieldError, setErr } = useAuthForm();
     const nameRef = useAutoFocus<HTMLInputElement>();
@@ -44,17 +45,19 @@ export default function Login() {
         console.log(email, "Otp opted");
         if (!validate()) return;
         setSendingOtp(true);
-        const res = await simpleLogin(email, "OTP");
-        setSendingOtp(false);
-        console.log("OTP: ", res)
-        navigate("/otp", {
-            state: {
-                email,
-                otpId: res.otpId,
-                loginMode: "OTP",
-                mode: "login"
-            },
-        });
+        try {
+            const res = await dispatch(loginUser({ email, loginMode: "OTP" })).unwrap();
+            navigate("/otp", {
+                state: {
+                    email,
+                    otpId: res.otpId,
+                    loginMode: "OTP",
+                    mode: "login"
+                },
+            });
+        } finally {
+            setSendingOtp(false);
+        }
 
     }
 
